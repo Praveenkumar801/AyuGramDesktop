@@ -9,6 +9,7 @@
 #include "apiwrap.h"
 #include "lang_auto.h"
 #include "mainwidget.h"
+#include "api/api_chat_participants.h"
 #include "api/api_sending.h"
 #include "ayu/ayu_settings.h"
 #include "ayu/ayu_state.h"
@@ -378,6 +379,107 @@ void AddDeleteOwnMessagesAction(PeerData *peerData,
 		tr::ayu_DeleteOwnMessages(tr::now),
 		DeleteMyMessagesHandler(sessionController, peerData),
 		&st::menuIconTTL);
+}
+
+void AddBanDeletedAccountsAction(PeerData *peerData,
+								  not_null<Window::SessionController*> sessionController,
+								  const Window::PeerMenuCallback &addCallback) {
+	if (!peerData) {
+		return;
+	}
+
+	const auto chat = peerData->asChat();
+	const auto channel = peerData->asChannel();
+	const auto isMegagroup = channel && channel->isMegagroup();
+
+	if (!chat && !isMegagroup) {
+		return;
+	}
+
+	if (chat && !chat->canBanMembers()) {
+		return;
+	}
+	if (channel && !channel->canBanMembers()) {
+		return;
+	}
+
+	const auto controller = sessionController;
+	addCallback(
+		tr::ayu_BanDeletedAccounts(tr::now),
+		[=]
+		{
+			if (controller->showFrozenError()) {
+				return;
+			}
+			controller->show(Ui::MakeConfirmBox({
+				.text = tr::ayu_BanDeletedAccountsConfirmation(tr::now),
+				.confirmed =
+				[=](Fn<void()> &&close)
+				{
+					const auto session = &peerData->session();
+					const auto kickNext = std::make_shared<Fn<void(std::vector<not_null<UserData*>>, int)>>();
+					*kickNext = [=](std::vector<not_null<UserData*>> users, int index)
+					{
+						if (index >= int(users.size())) {
+							return;
+						}
+						const auto user = users[index];
+						if (chat) {
+							session->api().chatParticipants().kick(chat, user);
+						} else if (channel) {
+							session->api().chatParticipants().kick(
+								channel,
+								user,
+								ChatRestrictionsInfo());
+						}
+						const auto delay = crl::time(300 + base::RandomValue<int>() % 300);
+						base::call_delayed(delay, [=] { (*kickNext)(users, index + 1); });
+					};
+
+					auto deletedUsers = std::vector<not_null<UserData*>>();
+					if (chat) {
+						for (const auto &user : chat->participants) {
+							if (user->isInaccessible()) {
+								deletedUsers.push_back(user);
+							}
+						}
+						(*kickNext)(std::move(deletedUsers), 0);
+					} else if (channel && channel->mgInfo) {
+						for (const auto &user : channel->mgInfo->lastParticipants) {
+							if (user->isInaccessible()) {
+								deletedUsers.push_back(user);
+							}
+						}
+						if (!deletedUsers.empty()) {
+							(*kickNext)(std::move(deletedUsers), 0);
+						} else {
+							session->api().chatParticipants().requestForAdd(
+								channel,
+								[=](const Api::ChatParticipants::TLMembers &data)
+								{
+									const auto parsed = Api::ChatParticipants::Parse(channel, data);
+									auto found = std::vector<not_null<UserData*>>();
+									for (const auto &p : parsed.list) {
+										if (p.isUser()) {
+											if (const auto user = session->data().userLoaded(p.userId())) {
+												if (user->isInaccessible()) {
+													found.push_back(user);
+												}
+											}
+										}
+									}
+									(*kickNext)(std::move(found), 0);
+								});
+						}
+					}
+					close();
+				},
+				.confirmText = tr::lng_box_delete(),
+				.cancelText = tr::lng_cancel(),
+				.confirmStyle = &st::attentionBoxButton,
+			}));
+		},
+		&st::menuIconBlock);
 }
 
 void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {

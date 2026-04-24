@@ -1,0 +1,91 @@
+name: Build Linux
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghcli /opt/hostedtoolcache
+          sudo docker image prune --all --force
+          df -h
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Jinja2
+        run: pip install jinja2
+
+      - name: Generate Dockerfile
+        run: |
+          cd Telegram/build/docker/centos_env
+          DEBUG='' MINSIZE=1 LTO='' ASAN='' JOBS=4 python3 gen_dockerfile.py > Dockerfile.generated
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ hashFiles('Telegram/build/docker/centos_env/Dockerfile') }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Telegram/build/docker/centos_env/Dockerfile.generated
+          load: true
+          tags: ayugram:build
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+
+      - name: Move cache
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+
+      - name: Build AyuGram
+        run: |
+          docker run --rm \
+            --cpus=$(nproc) \
+            --memory=12g \
+            -v ${{ github.workspace }}:/usr/src/tdesktop \
+            -w /usr/src/tdesktop/Telegram \
+            ayugram:build \
+            bash -c "
+              ./configure.py -DCMAKE_BUILD_TYPE=Release -DDESKTOP_APP_DISABLE_AUTOUPDATE=ON
+              cd ../out
+              cmake --build . --config Release --parallel $(nproc) --target Telegram
+            "
+
+      - name: Package artifact
+        run: |
+          mkdir -p artifact
+          cp out/Release/Telegram artifact/AyuGram || cp out/bin/Telegram artifact/AyuGram || true
+          find out -name "Telegram" -type f -executable -exec cp {} artifact/AyuGram \; 2>/dev/null || true
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AyuGram-Linux-x86_64
+          path: artifact/
+          if-no-files-found: warn
