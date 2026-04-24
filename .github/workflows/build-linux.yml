@@ -66,22 +66,25 @@ jobs:
       - name: Build AyuGram
         run: |
           docker run --rm \
+            -u 0 \
             --cpus=$(nproc) \
             --memory=12g \
             -v ${{ github.workspace }}:/usr/src/tdesktop \
             -w /usr/src/tdesktop/Telegram \
             ayugram:build \
             bash -c "
-              ./configure.py -DCMAKE_BUILD_TYPE=Release -DDESKTOP_APP_DISABLE_AUTOUPDATE=ON
+              set -e
+              chmod +x configure.py configure.sh
+              python3 configure.py -DCMAKE_BUILD_TYPE=Release -DDESKTOP_APP_DISABLE_AUTOUPDATE=ON
               cd ../out
-              cmake --build . --config Release --parallel $(nproc) --target Telegram
+              cmake --build . --config Release --parallel \$(nproc) --target Telegram
             "
 
       - name: Package artifact
         run: |
           mkdir -p artifact
-          cp out/Release/Telegram artifact/AyuGram || cp out/bin/Telegram artifact/AyuGram || true
           find out -name "Telegram" -type f -executable -exec cp {} artifact/AyuGram \; 2>/dev/null || true
+          find . -path "*/Release/Telegram" -type f -exec cp {} artifact/AyuGram \; 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
