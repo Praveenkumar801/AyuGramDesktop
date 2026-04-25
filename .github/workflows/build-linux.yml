@@ -64,11 +64,21 @@ jobs:
           mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
       - name: Build AyuGram
+        env:
+          TG_API_ID: ${{ secrets.API_ID }}
+          TG_API_HASH: ${{ secrets.API_HASH }}
         run: |
+          if [ -z "$TG_API_ID" ] || [ -z "$TG_API_HASH" ]; then
+            echo "ERROR: API_ID or API_HASH secrets are not set!"
+            echo "Go to repo Settings > Secrets > Actions and add API_ID and API_HASH"
+            exit 1
+          fi
           docker run --rm \
             -u 0 \
             --cpus=$(nproc) \
             --memory=12g \
+            -e TG_API_ID="$TG_API_ID" \
+            -e TG_API_HASH="$TG_API_HASH" \
             -v ${{ github.workspace }}:/usr/src/tdesktop \
             -w /usr/src/tdesktop/Telegram \
             ayugram:build \
@@ -78,8 +88,8 @@ jobs:
               python3 configure.py \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DDESKTOP_APP_DISABLE_AUTOUPDATE=ON \
-                -DTDESKTOP_API_ID=${{ secrets.API_ID }} \
-                -DTDESKTOP_API_HASH=${{ secrets.API_HASH }}
+                -DTDESKTOP_API_ID=\$TG_API_ID \
+                -DTDESKTOP_API_HASH=\$TG_API_HASH
               cd ../out
               cmake --build . --config Release --parallel \$(nproc) --target Telegram
             "
