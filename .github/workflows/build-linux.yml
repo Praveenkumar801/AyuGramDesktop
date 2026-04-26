@@ -92,17 +92,34 @@ jobs:
                 -DTDESKTOP_API_HASH=\$TG_API_HASH
               cd ../out
               cmake --build . --config Release --parallel \$(nproc) --target Telegram
+              mkdir -p /usr/src/tdesktop/artifact
+              BIN=\$(find . -maxdepth 4 -name Telegram -type f -executable | head -1)
+              if [ -z \"\$BIN\" ]; then
+                echo 'ERROR: Telegram binary not found after build'
+                find . -name 'Telegram*' -type f
+                exit 1
+              fi
+              echo \"Found binary: \$BIN\"
+              cp \"\$BIN\" /usr/src/tdesktop/artifact/AyuGram
+              strip /usr/src/tdesktop/artifact/AyuGram || true
+              chmod +x /usr/src/tdesktop/artifact/AyuGram
+              chown -R $(id -u):$(id -g) /usr/src/tdesktop/artifact || true
             "
 
-      - name: Package artifact
+      - name: Show artifact
         run: |
-          mkdir -p artifact
-          find out -name "Telegram" -type f -executable -exec cp {} artifact/AyuGram \; 2>/dev/null || true
-          find . -path "*/Release/Telegram" -type f -exec cp {} artifact/AyuGram \; 2>/dev/null || true
+          ls -la artifact/
+          file artifact/AyuGram
+
+      - name: Create tarball
+        run: |
+          cd artifact
+          tar -czf AyuGram-Linux-x86_64.tar.gz AyuGram
+          ls -la
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AyuGram-Linux-x86_64
-          path: artifact/
-          if-no-files-found: warn
+          path: artifact/AyuGram-Linux-x86_64.tar.gz
+          if-no-files-found: error
