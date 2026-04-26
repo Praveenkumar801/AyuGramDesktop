@@ -3007,6 +3007,60 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					callback,
 					&st::menuIconSelect);
 			}();
+
+			[&] { // Delete up to this message.
+				if (selectedState.count <= 0) {
+					return;
+				}
+				const auto toItem = groupLeaderOrSelf(item);
+				auto topToBottom = false;
+				auto nearestItem = (HistoryItem*)(nullptr);
+				{
+					auto minDiff = std::numeric_limits<int>::max();
+					for (const auto &[item, _] : _selected) {
+						const auto diff = item->fullId().msg.bare
+							- toItem->fullId().msg.bare;
+						if (std::abs(diff) < minDiff) {
+							nearestItem = item;
+							minDiff = std::abs(diff);
+							topToBottom = (diff < 0);
+						}
+					}
+				}
+				if (!nearestItem) {
+					return;
+				}
+				const auto start = (topToBottom ? nearestItem : toItem);
+				const auto end = (topToBottom ? toItem : nearestItem);
+				const auto left = MaxSelectedItems
+					- selectedState.count
+					+ (topToBottom ? 0 : 1);
+				const auto range = collectBetween(start, end, left);
+				if (range.empty()) {
+					return;
+				}
+				auto deletable = MessageIdsList();
+				deletable.reserve(range.size());
+				for (const auto &i : range) {
+					if (i->canDelete()) {
+						deletable.push_back(i->fullId());
+					}
+				}
+				if (deletable.empty()) {
+					return;
+				}
+				const auto controller = _controller;
+				const auto sessionPtr = &session();
+				const auto callback = [=] {
+					controller->show(Box<DeleteMessagesBox>(
+						sessionPtr,
+						MessageIdsList(deletable)));
+				};
+				_menu->addAction(
+					tr::ayu_DeleteMessagesUpTo(tr::now),
+					callback,
+					&st::menuIconDelete);
+			}();
 		}
 
 		AyuUi::AddReadUntilAction(_menu, item);

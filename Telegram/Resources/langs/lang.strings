@@ -8221,6 +8221,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_DeleteOwnMessagesConfirmation" = "Are you sure you want to delete all your messages from this group?";
 "ayu_BanDeletedAccounts" = "Ban deleted accounts";
 "ayu_BanDeletedAccountsConfirmation" = "Are you sure you want to ban all deleted accounts from this group?";
+"ayu_DeleteMessagesUpTo" = "Delete up to this message";
 "ayu_SuggestGhostModeTitle" = "Ghost Mode";
 "ayu_SuggestGhostModeStoryText" = "Do you want to enable **Ghost Mode** before viewing the story?";
 "ayu_SuggestGhostModeStoryActionTextYes" = "Yes";
