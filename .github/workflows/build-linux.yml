@@ -93,10 +93,10 @@ jobs:
               cd ../out
               cmake --build . --config Release --parallel \$(nproc) --target Telegram
               mkdir -p /usr/src/tdesktop/artifact
-              BIN=\$(find . -maxdepth 4 -name Telegram -type f -executable | head -1)
+              BIN=\$(find . -maxdepth 4 \\( -name AyuGram -o -name Telegram \\) -type f -executable | head -1)
               if [ -z \"\$BIN\" ]; then
-                echo 'ERROR: Telegram binary not found after build'
-                find . -name 'Telegram*' -type f
+                echo 'ERROR: AyuGram/Telegram binary not found after build'
+                find . -maxdepth 4 -type f -executable
                 exit 1
               fi
               echo \"Found binary: \$BIN\"
