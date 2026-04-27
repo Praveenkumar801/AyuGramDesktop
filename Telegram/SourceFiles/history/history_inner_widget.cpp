@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_item_components.h"
 #include "history/history_item_text.h"
 #include "payments/payments_reaction_process.h"
+#include "ui/boxes/confirm_box.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/menu/menu_multiline_action.h"
 #include "ui/widgets/popup_menu.h"
@@ -118,6 +119,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/ui/dialogs_video_userpic.h"
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
+#include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 
 #include <QtGui/QClipboard>
@@ -3032,31 +3034,84 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				}
 				const auto start = (topToBottom ? nearestItem : toItem);
 				const auto end = (topToBottom ? toItem : nearestItem);
-				const auto left = MaxSelectedItems
-					- selectedState.count
-					+ (topToBottom ? 0 : 1);
-				const auto range = collectBetween(start, end, left);
+				constexpr auto kBulkDeleteCap = 10000;
+				const auto range = collectBetween(start, end, kBulkDeleteCap);
 				if (range.empty()) {
 					return;
 				}
-				auto deletable = MessageIdsList();
-				deletable.reserve(range.size());
+				auto perHistory = base::flat_map<
+					not_null<History*>,
+					QVector<MTPint>>();
 				for (const auto &i : range) {
-					if (i->canDelete()) {
-						deletable.push_back(i->fullId());
+					if (i->canDelete() && i->isRegular()) {
+						perHistory[i->history()].push_back(MTP_int(i->fullId().msg));
 					}
 				}
-				if (deletable.empty()) {
+				if (perHistory.empty()) {
 					return;
 				}
+				auto totalCount = 0;
+				for (const auto &[_, ids] : perHistory) {
+					totalCount += ids.size();
+				}
 				const auto controller = _controller;
+				const auto title = (totalCount > MaxSelectedItems)
+					? QString("%1 (%2)").arg(
+						tr::ayu_DeleteMessagesUpTo(tr::now)).arg(totalCount)
+					: tr::ayu_DeleteMessagesUpTo(tr::now);
 				const auto callback = [=] {
-					controller->show(Box<DeleteMessagesBox>(
-						session,
-						MessageIdsList(deletable)));
+					if (totalCount <= MaxSelectedItems) {
+						auto ids = MessageIdsList();
+						ids.reserve(totalCount);
+						for (const auto &[history, mtpIds] : perHistory) {
+							for (const auto &id : mtpIds) {
+								ids.push_back({ history->peer->id, MsgId(id.v) });
+							}
+						}
+						controller->show(Box<DeleteMessagesBox>(
+							session,
+							std::move(ids)));
+						return;
+					}
+					controller->show(Ui::MakeConfirmBox({
+						.text = tr::lng_selected_delete_sure(
+							tr::now,
+							lt_count,
+							totalCount),
+						.confirmed = [=](Fn<void()> &&close) {
+							constexpr auto kChunk = 100;
+							constexpr auto kDelayMs = 350;
+							for (const auto &[history, ids] : perHistory) {
+								const auto step = std::make_shared<
+									Fn<void(int)>>();
+								*step = [=](int from) {
+									if (from >= ids.size()) {
+										return;
+									}
+									const auto to = std::min(
+										from + kChunk,
+										int(ids.size()));
+									auto chunk = QVector<MTPint>(
+										ids.begin() + from,
+										ids.begin() + to);
+									history->owner().histories()
+										.deleteMessages(history, chunk, true);
+									if (to < ids.size()) {
+										base::call_delayed(
+											kDelayMs,
+											[=] { (*step)(to); });
+									}
+								};
+								(*step)(0);
+							}
+							close();
+						},
+						.confirmText = tr::lng_box_delete(),
+						.confirmStyle = &st::attentionBoxButton,
+					}));
 				};
 				_menu->addAction(
-					tr::ayu_DeleteMessagesUpTo(tr::now),
+					title,
 					callback,
 					&st::menuIconDelete);
 			}();
