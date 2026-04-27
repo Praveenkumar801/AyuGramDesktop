@@ -3050,10 +3050,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					return;
 				}
 				const auto controller = _controller;
-				const auto sessionPtr = &session();
 				const auto callback = [=] {
 					controller->show(Box<DeleteMessagesBox>(
-						sessionPtr,
+						session,
 						MessageIdsList(deletable)));
 				};
 				_menu->addAction(
