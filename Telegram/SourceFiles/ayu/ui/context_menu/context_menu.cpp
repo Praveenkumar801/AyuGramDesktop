@@ -482,6 +482,42 @@ void AddBanDeletedAccountsAction(PeerData *peerData,
 		&st::menuIconBlock);
 }
 
+void AddSpyOverridesAction(PeerData *peerData,
+						   not_null<Window::SessionController*> sessionController,
+						   const Window::PeerMenuCallback &addCallback) {
+	if (!peerData) {
+		return;
+	}
+	const auto peerId = peerData->id.value;
+	auto &settings = AyuSettings::getInstance();
+
+	const auto saveDeletedActive = settings.saveDeletedMessagesFor(peerId);
+	addCallback({
+		.text = saveDeletedActive
+			? tr::ayu_SpyOverrideSaveDeletedOn(tr::now)
+			: tr::ayu_SpyOverrideSaveDeletedOff(tr::now),
+		.handler = [peerId] {
+			AyuSettings::getInstance().toggleSaveDeletedException(peerId);
+		},
+		.icon = saveDeletedActive
+			? &st::menuIconShowInChat
+			: &st::menuIconRemove,
+	});
+
+	const auto saveEditsActive = settings.saveMessagesHistoryFor(peerId);
+	addCallback({
+		.text = saveEditsActive
+			? tr::ayu_SpyOverrideSaveEditsOn(tr::now)
+			: tr::ayu_SpyOverrideSaveEditsOff(tr::now),
+		.handler = [peerId] {
+			AyuSettings::getInstance().toggleSaveMessagesHistoryException(peerId);
+		},
+		.icon = saveEditsActive
+			? &st::menuIconShowInChat
+			: &st::menuIconRemove,
+	});
+}
+
 void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 	if (item->hideEditedBadge()) {
 		return;

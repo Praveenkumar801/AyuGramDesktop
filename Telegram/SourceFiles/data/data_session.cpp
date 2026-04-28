@@ -2737,7 +2737,7 @@ void Session::updateEditedMessage(const MTPMessage &data) {
 		goto proceed;
 	}
 	edit = HistoryMessageEdition(_session, data.c_message());
-	if (settings.saveMessagesHistory() && !existing->isLocal() && !existing->author()->isSelf() && !edit.isEditHide) {
+	if (settings.saveMessagesHistoryFor(existing->history()->peer->id.value) && !existing->isLocal() && !existing->author()->isSelf() && !edit.isEditHide) {
 		const auto msg = existing->originalText();
 
 		if (edit.textWithEntities == msg || msg.empty()) {
@@ -2893,25 +2893,22 @@ void Session::checkTTLs() {
 	_ttlCheckTimer.cancel();
 	const auto now = base::unixtime::now();
 
-	if (settings.saveDeletedMessages()) {
-		auto toBeRemoved = ranges::views::take_while(
-			_ttlMessages,
-			[now](const auto &pair) {
-				return pair.first <= now;
-			}) | ranges::views::transform([](const auto &pair) {
-				return pair.second;
-			}) | ranges::views::join;
+	auto toBeRemoved = ranges::views::take_while(
+		_ttlMessages,
+		[now](const auto &pair) {
+			return pair.first <= now;
+		}) | ranges::views::transform([](const auto &pair) {
+			return pair.second;
+		}) | ranges::views::join;
 
-		auto itemsToProcess = toBeRemoved | ranges::to_vector;
-		for (const auto &item : itemsToProcess) {
-			// remove message from `_ttlMessages` to avoid calling this method infinitely
+	auto itemsToProcess = toBeRemoved | ranges::to_vector;
+	for (const auto &item : itemsToProcess) {
+		const auto peerId = item->history()->peer->id.value;
+		if (settings.saveDeletedMessagesFor(peerId)) {
 			item->applyTTL(0);
-
 			processMessageDelete(item);
-		}
-	} else {
-		while (!_ttlMessages.empty() && _ttlMessages.begin()->first <= now) {
-			_ttlMessages.begin()->second.front()->destroy();
+		} else {
+			item->destroy();
 		}
 	}
 	scheduleNextTTLs();

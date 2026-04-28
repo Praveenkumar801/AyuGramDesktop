@@ -689,7 +689,7 @@ int getScheduleTime(int64 sumSize) {
 bool isMessageSavable(const not_null<HistoryItem*> item) {
 	const auto &settings = AyuSettings::getInstance();
 
-	if (!settings.saveDeletedMessages()) {
+	if (!settings.saveDeletedMessagesFor(item->history()->peer->id.value)) {
 		return false;
 	}
 

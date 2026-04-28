@@ -43,6 +43,9 @@ void AddDeleteOwnMessagesAction(PeerData *peerData,
 void AddBanDeletedAccountsAction(PeerData *peerData,
 								  not_null<Window::SessionController*> sessionController,
 								  const Window::PeerMenuCallback &addCallback);
+void AddSpyOverridesAction(PeerData *peerData,
+						   not_null<Window::SessionController*> sessionController,
+						   const Window::PeerMenuCallback &addCallback);
 
 void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddHideMessageAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);

@@ -442,6 +442,20 @@ void AyuSettings::removeShadowBan(int64 id) {
 	}
 }
 
+void AyuSettings::toggleSaveDeletedException(int64 peerId) {
+	if (_saveDeletedExceptions.erase(peerId) == 0) {
+		_saveDeletedExceptions.insert(peerId);
+	}
+	save();
+}
+
+void AyuSettings::toggleSaveMessagesHistoryException(int64 peerId) {
+	if (_saveMessagesHistoryExceptions.erase(peerId) == 0) {
+		_saveMessagesHistoryExceptions.insert(peerId);
+	}
+	save();
+}
+
 void AyuSettings::validate() {
 	AyuSettings defaults;
 	auto modified = false;
@@ -1027,6 +1041,8 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"saveMessagesHistory", s._saveMessagesHistory.current()},
 		{"saveForBots", s._saveForBots.current()},
 		{"shadowBanIds", s._shadowBanIds},
+		{"saveDeletedExceptions", s._saveDeletedExceptions},
+		{"saveMessagesHistoryExceptions", s._saveMessagesHistoryExceptions},
 		{"filtersEnabled", s._filtersEnabled.current()},
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"hideFromBlocked", s._hideFromBlocked.current()},
@@ -1127,6 +1143,8 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._saveMessagesHistory = j.value("saveMessagesHistory", defaults._saveMessagesHistory.current());
 	s._saveForBots = j.value("saveForBots", defaults._saveForBots.current());
 	s._shadowBanIds = j.value("shadowBanIds", defaults._shadowBanIds);
+	s._saveDeletedExceptions = j.value("saveDeletedExceptions", defaults._saveDeletedExceptions);
+	s._saveMessagesHistoryExceptions = j.value("saveMessagesHistoryExceptions", defaults._saveMessagesHistoryExceptions);
 	s._filtersEnabled = j.value("filtersEnabled", defaults._filtersEnabled.current());
 	s._filtersEnabledInChats = j.value("filtersEnabledInChats", defaults._filtersEnabledInChats.current());
 	s._hideFromBlocked = j.value("hideFromBlocked", defaults._hideFromBlocked.current());

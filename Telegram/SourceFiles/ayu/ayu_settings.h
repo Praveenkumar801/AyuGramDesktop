@@ -248,6 +248,23 @@ public:
 
 	[[nodiscard]] bool saveDeletedMessages() const { return _saveDeletedMessages.current(); }
 	[[nodiscard]] bool saveMessagesHistory() const { return _saveMessagesHistory.current(); }
+
+	[[nodiscard]] bool saveDeletedMessagesFor(int64 peerId) const {
+		const auto global = _saveDeletedMessages.current();
+		return _saveDeletedExceptions.contains(peerId) ? !global : global;
+	}
+	[[nodiscard]] bool saveMessagesHistoryFor(int64 peerId) const {
+		const auto global = _saveMessagesHistory.current();
+		return _saveMessagesHistoryExceptions.contains(peerId) ? !global : global;
+	}
+	[[nodiscard]] bool isSaveDeletedExcepted(int64 peerId) const {
+		return _saveDeletedExceptions.contains(peerId);
+	}
+	[[nodiscard]] bool isSaveMessagesHistoryExcepted(int64 peerId) const {
+		return _saveMessagesHistoryExceptions.contains(peerId);
+	}
+	void toggleSaveDeletedException(int64 peerId);
+	void toggleSaveMessagesHistoryException(int64 peerId);
 	[[nodiscard]] bool saveForBots() const { return _saveForBots.current(); }
 	[[nodiscard]] bool filtersEnabled() const { return _filtersEnabled.current(); }
 	[[nodiscard]] bool filtersEnabledInChats() const { return _filtersEnabledInChats.current(); }
@@ -595,6 +612,8 @@ private:
 	rpl::variable<bool> _saveMessagesHistory = true;
 	rpl::variable<bool> _saveForBots = false;
 	std::unordered_set<int64> _shadowBanIds;
+	std::unordered_set<int64> _saveDeletedExceptions;
+	std::unordered_set<int64> _saveMessagesHistoryExceptions;
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _hideFromBlocked = false;

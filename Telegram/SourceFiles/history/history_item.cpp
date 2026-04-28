@@ -2526,7 +2526,7 @@ void HistoryItem::clearMediaAsExpired() {
 	}
 
 	const auto &settings = AyuSettings::getInstance();
-	if (settings.saveDeletedMessages()) {
+	if (settings.saveDeletedMessagesFor(history()->peer->id.value)) {
 		return;
 	}
 
