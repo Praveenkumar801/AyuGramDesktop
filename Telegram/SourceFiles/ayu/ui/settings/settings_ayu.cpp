@@ -590,7 +590,7 @@ void RequestHiddenChatsSecretChange(
 	session->api().cloudPassword().state(
 	) | rpl::take(
 		1
-	) | rpl::start_with_next([=](const Core::CloudPasswordState &state) {
+	) | rpl::on_next([=](const Core::CloudPasswordState &state) {
 		auto fields = PasscodeBox::CloudFields::From(state);
 		fields.customTitle = tr::ayu_HiddenChatsTitle();
 		fields.customDescription = tr::ayu_HiddenChatsSecret2FAPrompt(tr::now);
