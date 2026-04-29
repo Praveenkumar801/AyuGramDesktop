@@ -182,6 +182,8 @@ set(ayugram_files
         ayu/ui/message_history/history_section.h
         ayu/ui/boxes/edit_mark_box.cpp
         ayu/ui/boxes/edit_mark_box.h
+        ayu/ui/boxes/edit_secret_box.cpp
+        ayu/ui/boxes/edit_secret_box.h
         ayu/ui/boxes/font_selector.cpp
         ayu/ui/boxes/font_selector.h
         ayu/ui/boxes/import_filters_box.cpp

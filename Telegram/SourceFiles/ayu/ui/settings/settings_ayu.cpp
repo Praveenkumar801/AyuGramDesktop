@@ -12,6 +12,7 @@
 #include "ayu/ayu_settings.h"
 #include "ayu/ui/ayu_userpic.h"
 #include "ayu/ui/boxes/edit_mark_box.h"
+#include "ayu/ui/boxes/edit_secret_box.h"
 #include "ayu/ui/settings/ayu_builder.h"
 #include "ayu/ui/settings/settings_ayu_utils.h"
 #include "ayu/ui/settings/settings_main.h"
@@ -569,12 +570,15 @@ void BuildSpyEssentials(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 void OpenHiddenChatsSecretEditor(
 		not_null<Window::SessionController*> controller) {
 	auto *settings = &AyuSettings::getInstance();
-	auto box = Box<EditMarkBox>(
+	const auto hasExisting = !settings->hiddenChatsSecret().isEmpty();
+	auto box = Box<EditSecretBox>(
 		tr::ayu_HiddenChatsSecret(),
-		settings->hiddenChatsSecret(),
-		QString(),
+		hasExisting,
 		[](const QString &value) {
 			AyuSettings::getInstance().setHiddenChatsSecret(value);
+		},
+		[] {
+			AyuSettings::getInstance().setHiddenChatsSecret(QString());
 		});
 	controller->show(std::move(box));
 }
@@ -589,7 +593,6 @@ void RequestHiddenChatsSecretChange(
 		return;
 	}
 	if (settings->hiddenChatsSecret().isEmpty()) {
-		// First-time setup: skip 2FA verification, just set the code.
 		OpenHiddenChatsSecretEditor(controller);
 		return;
 	}
@@ -602,12 +605,20 @@ void RequestHiddenChatsSecretChange(
 		fields.customDescription = tr::ayu_HiddenChatsSecret2FAPrompt(tr::now);
 		fields.customSubmitButton = tr::lng_passcode_submit();
 		fields.customCheckCallback = [=](
-				const Core::CloudPasswordResult &,
+				const Core::CloudPasswordResult &check,
 				base::weak_qptr<PasscodeBox> box) {
-			if (const auto strong = box.get()) {
-				strong->closeBox();
-			}
-			OpenHiddenChatsSecretEditor(controller);
+			session->api().request(MTPaccount_GetPasswordSettings(
+				check.result
+			)).done([=](const MTPaccount_PasswordSettings &) {
+				if (const auto strong = box.get()) {
+					strong->closeBox();
+				}
+				OpenHiddenChatsSecretEditor(controller);
+			}).fail([=](const MTP::Error &error) {
+				if (const auto strong = box.get()) {
+					strong->handleCustomCheckError(error);
+				}
+			}).handleFloodErrors().send();
 		};
 		controller->show(Box<PasscodeBox>(session, fields));
 	}, controller->lifetime());
