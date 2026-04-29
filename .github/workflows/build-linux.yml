@@ -111,15 +111,9 @@ jobs:
           ls -la artifact/
           file artifact/AyuGram
 
-      - name: Create tarball
-        run: |
-          cd artifact
-          tar -czf AyuGram-Linux-x86_64.tar.gz AyuGram
-          ls -la
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AyuGram-Linux-x86_64
-          path: artifact/AyuGram-Linux-x86_64.tar.gz
+          path: artifact/AyuGram
           if-no-files-found: error
