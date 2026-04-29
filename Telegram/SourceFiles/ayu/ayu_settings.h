@@ -8,6 +8,7 @@
 
 #include "ayu/libs/json.hpp"
 #include "ayu/libs/json_ext.hpp"
+#include "crl/crl_time.h"
 #include "rpl/lifetime.h"
 #include "rpl/producer.h"
 #include "rpl/variable.h"
@@ -290,6 +291,7 @@ public:
 	[[nodiscard]] bool hiddenChatsRevealed() const { return _hiddenChatsRevealed.current(); }
 	[[nodiscard]] rpl::producer<bool> hiddenChatsRevealedValue() const { return _hiddenChatsRevealed.value(); }
 	void setHiddenChatsRevealed(bool val);
+	[[nodiscard]] crl::time hiddenChatsRevealedAt() const { return _hiddenChatsRevealedAt; }
 	[[nodiscard]] bool saveForBots() const { return _saveForBots.current(); }
 	[[nodiscard]] bool filtersEnabled() const { return _filtersEnabled.current(); }
 	[[nodiscard]] bool filtersEnabledInChats() const { return _filtersEnabledInChats.current(); }
@@ -646,6 +648,7 @@ private:
 	rpl::variable<QString> _hiddenChatsSecret;
 	rpl::variable<int> _hiddenChatsAutoLockSeconds = 300;
 	rpl::variable<bool> _hiddenChatsRevealed = false;
+	crl::time _hiddenChatsRevealedAt = 0;
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _hideFromBlocked = false;

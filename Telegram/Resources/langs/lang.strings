@@ -8240,6 +8240,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_HiddenChatsAutoLockNever" = "Never";
 "ayu_HiddenChatsNeed2FA" = "Enable 2FA on your account first to use Hidden Chats.";
 "ayu_HiddenChatsSecret2FAPrompt" = "Enter your 2FA password to change the secret code.";
+"ayu_HiddenChatsBarRevealed" = "Hidden chats revealed";
+"ayu_HiddenChatsLockNow" = "Lock now";
 "ayu_SuggestGhostModeTitle" = "Ghost Mode";
 "ayu_SuggestGhostModeStoryText" = "Do you want to enable **Ghost Mode** before viewing the story?";
 "ayu_SuggestGhostModeStoryActionTextYes" = "Yes";

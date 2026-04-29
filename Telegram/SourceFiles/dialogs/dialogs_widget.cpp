@@ -101,6 +101,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 // AyuGram includes
 #include "ayu/ayu_settings.h"
+#include "ayu/ui/components/hidden_chats_bar.h"
 #include "ayu/utils/taptic_engine/taptic_engine.h"
 #include "ayu/utils/telegram_helpers.h"
 
@@ -774,6 +775,7 @@ Widget::Widget(
 		}, lifetime());
 
 		setupMoreChatsBar();
+		setupHiddenChatsBar();
 		setupDownloadBar();
 	}
 	setupSwipeBack();
@@ -1288,6 +1290,18 @@ void Widget::setupMoreChatsBar() {
 			updateControlsGeometry();
 		}, _moreChatsBar->lifetime());
 	}, lifetime());
+}
+
+void Widget::setupHiddenChatsBar() {
+	if (_layout == Layout::Child) {
+		return;
+	}
+	_hiddenChatsBar = std::make_unique<AyuUi::HiddenChatsBar>(this);
+	trackScroll(_hiddenChatsBar->wrap());
+	_hiddenChatsBar->heightValue(
+	) | rpl::on_next([=] {
+		updateControlsGeometry();
+	}, _hiddenChatsBar->lifetime());
 }
 
 void Widget::setupDownloadBar() {
@@ -4192,6 +4206,9 @@ void Widget::updateControlsGeometry() {
 	if (_chatFilters) {
 		_chatFilters->resizeToWidth(barw);
 	}
+	if (_hiddenChatsBar) {
+		_hiddenChatsBar->resizeToWidth(barw);
+	}
 	if (_frozenAccountBar) {
 		_frozenAccountBar->resize(barw, _frozenAccountBar->height());
 	}
@@ -4226,12 +4243,17 @@ void Widget::updateControlsGeometry() {
 		if (_chatFilters) {
 			_chatFilters->move(0, chatFiltersTop);
 		}
-		const auto scrollTop = chatFiltersTop
-			+ ((_chatFilters
-				&& _searchState.query.isEmpty()
-				&& !_openedForum && !searchInPeer())
-				? (_chatFilters->height() * (1. - narrowRatio))
-				: 0);
+		const auto chatFiltersHeightContrib = (_chatFilters
+			&& _searchState.query.isEmpty()
+			&& !_openedForum && !searchInPeer())
+			? int(_chatFilters->height() * (1. - narrowRatio))
+			: 0;
+		const auto hiddenChatsBarTop = chatFiltersTop + chatFiltersHeightContrib;
+		if (_hiddenChatsBar) {
+			_hiddenChatsBar->move(0, hiddenChatsBarTop);
+		}
+		const auto scrollTop = hiddenChatsBarTop
+			+ (_hiddenChatsBar ? _hiddenChatsBar->height() : 0);
 		const auto scrollHeight = height() - scrollTop - bottomSkip;
 		const auto wasScrollHeight = _scroll->height();
 		_scroll->setGeometry(0, scrollTop, scrollWidth, scrollHeight);

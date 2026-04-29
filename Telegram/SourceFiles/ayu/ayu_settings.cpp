@@ -496,8 +496,8 @@ void AyuSettings::setHiddenChatsAutoLockSeconds(int val) {
 
 void AyuSettings::setHiddenChatsRevealed(bool val) {
 	if (_hiddenChatsRevealed.current() == val) return;
+	_hiddenChatsRevealedAt = val ? crl::now() : 0;
 	_hiddenChatsRevealed = val;
-	// transient — never saved
 	refreshHiddenChatList();
 	auto &timer = hiddenChatsAutoLockTimer();
 	if (val && _hiddenChatsAutoLockSeconds.current() > 0) {
