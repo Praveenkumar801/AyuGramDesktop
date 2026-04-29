@@ -14,13 +14,9 @@
 EditSecretBox::EditSecretBox(
 	QWidget *,
 	rpl::producer<QString> title,
-	bool hasExistingSecret,
-	Fn<void(const QString &)> saveCallback,
-	Fn<void()> clearCallback)
+	Fn<void(const QString &)> saveCallback)
 : _title(std::move(title))
-, _hasExistingSecret(hasExistingSecret)
 , _saveCallback(std::move(saveCallback))
-, _clearCallback(std::move(clearCallback))
 , _input(this, st::defaultInputField, _title) {
 }
 
@@ -32,13 +28,6 @@ void EditSecretBox::prepare() {
 		+ st::boxPadding.bottom()
 		+ st::contactPadding.bottom();
 	setDimensions(st::boxWidth, newHeight);
-
-	if (_hasExistingSecret && _clearCallback) {
-		addLeftButton(tr::ayu_HiddenChatsClearSecret(), [=] {
-			_clearCallback();
-			closeBox();
-		});
-	}
 
 	addButton(tr::lng_settings_save(), [=] { save(); });
 	addButton(tr::lng_cancel(), [=] { closeBox(); });

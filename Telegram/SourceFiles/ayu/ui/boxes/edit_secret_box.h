@@ -17,9 +17,7 @@ public:
 	EditSecretBox(
 		QWidget *,
 		rpl::producer<QString> title,
-		bool hasExistingSecret,
-		Fn<void(const QString &)> saveCallback,
-		Fn<void()> clearCallback);
+		Fn<void(const QString &)> saveCallback);
 
 protected:
 	void setInnerFocus() override;
@@ -30,9 +28,7 @@ private:
 	void save();
 
 	rpl::producer<QString> _title;
-	bool _hasExistingSecret = false;
 	Fn<void(const QString &)> _saveCallback;
-	Fn<void()> _clearCallback;
 
 	object_ptr<Ui::PasswordInput> _input;
 };

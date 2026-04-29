@@ -32,6 +32,7 @@
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_settings.h"
+#include "ui/boxes/confirm_box.h"
 #include "ui/painter.h"
 #include "ui/vertical_list.h"
 #include "ui/text/text.h"
@@ -569,31 +570,22 @@ void BuildSpyEssentials(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 
 void OpenHiddenChatsSecretEditor(
 		not_null<Window::SessionController*> controller) {
-	auto *settings = &AyuSettings::getInstance();
-	const auto hasExisting = !settings->hiddenChatsSecret().isEmpty();
 	auto box = Box<EditSecretBox>(
 		tr::ayu_HiddenChatsSecret(),
-		hasExisting,
 		[](const QString &value) {
 			AyuSettings::getInstance().setHiddenChatsSecret(value);
-		},
-		[] {
-			AyuSettings::getInstance().setHiddenChatsSecret(QString());
 		});
 	controller->show(std::move(box));
 }
 
-void RequestHiddenChatsSecretChange(
-		not_null<Window::SessionController*> controller) {
-	auto *settings = &AyuSettings::getInstance();
+void Verify2FA(
+		not_null<Window::SessionController*> controller,
+		QString prompt,
+		Fn<void()> onSuccess) {
 	const auto session = &controller->session();
 	const auto state = session->api().cloudPassword().stateCurrent();
 	if (!state || !state->hasPassword) {
 		Ui::Toast::Show(tr::ayu_HiddenChatsNeed2FA(tr::now));
-		return;
-	}
-	if (settings->hiddenChatsSecret().isEmpty()) {
-		OpenHiddenChatsSecretEditor(controller);
 		return;
 	}
 	session->api().cloudPassword().state(
@@ -602,7 +594,7 @@ void RequestHiddenChatsSecretChange(
 	) | rpl::on_next([=](const Core::CloudPasswordState &state) {
 		auto fields = PasscodeBox::CloudFields::From(state);
 		fields.customTitle = tr::ayu_HiddenChatsTitle();
-		fields.customDescription = tr::ayu_HiddenChatsSecret2FAPrompt(tr::now);
+		fields.customDescription = prompt;
 		fields.customSubmitButton = tr::lng_passcode_submit();
 		fields.customCheckCallback = [=](
 				const Core::CloudPasswordResult &check,
@@ -613,7 +605,7 @@ void RequestHiddenChatsSecretChange(
 				if (const auto strong = box.get()) {
 					strong->closeBox();
 				}
-				OpenHiddenChatsSecretEditor(controller);
+				onSuccess();
 			}).fail([=](const MTP::Error &error) {
 				if (const auto strong = box.get()) {
 					strong->handleCustomCheckError(error);
@@ -622,6 +614,39 @@ void RequestHiddenChatsSecretChange(
 		};
 		controller->show(Box<PasscodeBox>(session, fields));
 	}, controller->lifetime());
+}
+
+void RequestEnableHiddenChats(
+		not_null<Window::SessionController*> controller) {
+	Verify2FA(
+		controller,
+		tr::ayu_HiddenChatsEnable2FAPrompt(tr::now),
+		[=] { OpenHiddenChatsSecretEditor(controller); });
+}
+
+void RequestChangeHiddenChatsSecret(
+		not_null<Window::SessionController*> controller) {
+	Verify2FA(
+		controller,
+		tr::ayu_HiddenChatsChange2FAPrompt(tr::now),
+		[=] { OpenHiddenChatsSecretEditor(controller); });
+}
+
+void RequestDisableHiddenChats(
+		not_null<Window::SessionController*> controller) {
+	Verify2FA(
+		controller,
+		tr::ayu_HiddenChatsDisable2FAPrompt(tr::now),
+		[=] {
+			controller->show(Ui::MakeConfirmBox({
+				.text = tr::ayu_HiddenChatsDisableConfirm(),
+				.confirmed = [=](Fn<void()> &&close) {
+					AyuSettings::getInstance().setHiddenChatsSecret(QString());
+					close();
+				},
+				.confirmText = tr::ayu_HiddenChatsDisableConfirmYes(),
+			}));
+		});
 }
 
 void BuildHiddenChats(SectionBuilder &builder, AyuSectionBuilder &ayu) {
@@ -634,10 +659,32 @@ void BuildHiddenChats(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 		.id = u"ayu/hiddenChatsSecret"_q,
 		.title = tr::ayu_HiddenChatsSecret(),
 		.st = &st::settingsButtonNoIcon,
-		.label = settings->hiddenChatsSecretValue(),
+		.label = settings->hiddenChatsSecretValue(
+		) | rpl::map([](const QString &v) {
+			return v.isEmpty()
+				? tr::ayu_HiddenChatsDisabled(tr::now)
+				: tr::ayu_HiddenChatsEnabled(tr::now);
+		}),
 		.onClick = [=] {
-			RequestHiddenChatsSecretChange(controller);
+			if (settings->hiddenChatsSecret().isEmpty()) {
+				RequestEnableHiddenChats(controller);
+			} else {
+				RequestDisableHiddenChats(controller);
+			}
 		},
+	});
+
+	builder.addButton({
+		.id = u"ayu/hiddenChatsChange"_q,
+		.title = tr::ayu_HiddenChatsChange(),
+		.st = &st::settingsButtonNoIcon,
+		.onClick = [=] {
+			RequestChangeHiddenChatsSecret(controller);
+		},
+		.shown = settings->hiddenChatsSecretValue(
+		) | rpl::map([](const QString &v) {
+			return !v.isEmpty();
+		}),
 	});
 
 	ayu.addSlider({
