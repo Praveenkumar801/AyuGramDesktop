@@ -8222,10 +8222,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_BanDeletedAccounts" = "Ban deleted accounts";
 "ayu_BanDeletedAccountsConfirmation" = "Are you sure you want to ban all deleted accounts from this group?";
 "ayu_DeleteMessagesUpTo" = "Delete up to this message";
-"ayu_SpyOverrideSaveDeletedOn" = "Saving deleted (on) — click to disable here";
-"ayu_SpyOverrideSaveDeletedOff" = "Saving deleted (off) — click to enable here";
-"ayu_SpyOverrideSaveEditsOn" = "Saving edits (on) — click to disable here";
-"ayu_SpyOverrideSaveEditsOff" = "Saving edits (off) — click to enable here";
+"ayu_SpyOverrideSaveDeletedOn" = "Don't save deleted here";
+"ayu_SpyOverrideSaveDeletedOff" = "Save deleted here";
+"ayu_SpyOverrideSaveEditsOn" = "Don't save edits here";
+"ayu_SpyOverrideSaveEditsOff" = "Save edits here";
 "ayu_SuggestGhostModeTitle" = "Ghost Mode";
 "ayu_SuggestGhostModeStoryText" = "Do you want to enable **Ghost Mode** before viewing the story?";
 "ayu_SuggestGhostModeStoryActionTextYes" = "Yes";
