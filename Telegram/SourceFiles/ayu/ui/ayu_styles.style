@@ -125,13 +125,3 @@ ayuServiceTimeBadgeGap: 8px;
 ayuServiceTimeBadgeTrailingInset: 3px;
 ayuServiceTimeBadgeLastLineWidthAdd: 9px;
 
-ayuHiddenChatsBarHeight: 32px;
-ayuHiddenChatsBarPadding: margins(12px, 0px, 12px, 0px);
-ayuHiddenChatsBarIconSkip: 8px;
-ayuHiddenChatsBarFont: font(13px semibold);
-ayuHiddenChatsBarLink: LinkButton(defaultLinkButton) {
-	color: lightButtonFg;
-	overColor: lightButtonFgOver;
-	font: font(13px semibold);
-	overFont: font(13px semibold);
-}

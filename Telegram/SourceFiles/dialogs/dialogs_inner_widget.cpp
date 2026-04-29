@@ -93,6 +93,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QMimeData>
 
 // AyuGram includes
+#include "ayu/ayu_settings.h"
 #include "ayu/ui/ayu_userpic.h"
 #include "ayu/utils/telegram_helpers.h"
 #include "styles/style_ayu_icons.h"
@@ -3736,8 +3737,18 @@ void InnerWidget::applySearchState(SearchState state) {
 			setState(WidgetState::Filtered);
 			_filterResults.clear();
 			_filterResultsGlobal.clear();
+			const auto &ayuSettings = AyuSettings::getInstance();
+			const auto hideHidden = !ayuSettings.hiddenChatsRevealed();
 			const auto append = [&](not_null<IndexedList*> list) {
-				const auto results = list->filtered(words);
+				auto results = list->filtered(words);
+				if (hideHidden) {
+					results.erase(ranges::remove_if(results, [&](
+							not_null<Row*> row) {
+						const auto peer = row->key().peer();
+						return peer
+							&& ayuSettings.isHiddenChat(peer->id.value);
+					}), results.end());
+				}
 				auto top = filteredHeight();
 				auto i = _filterResults.insert(
 					end(_filterResults),
@@ -3811,6 +3822,14 @@ void InnerWidget::onHashtagFilterUpdate(QStringView newFilter) {
 }
 
 void InnerWidget::appendToFiltered(Key key) {
+	const auto &ayuSettings = AyuSettings::getInstance();
+	if (!ayuSettings.hiddenChatsRevealed()) {
+		if (const auto peer = key.peer()) {
+			if (ayuSettings.isHiddenChat(peer->id.value)) {
+				return;
+			}
+		}
+	}
 	for (const auto &row : _filterResults) {
 		if (row.key() == key) {
 			return;
@@ -4203,10 +4222,18 @@ void InnerWidget::peerSearchReceived(Api::PeerSearchResult result) {
 		}
 		return false;
 	};
+	const auto &ayuSettings = AyuSettings::getInstance();
+	const auto hideHidden = !ayuSettings.hiddenChatsRevealed();
+	const auto isHidden = [&](not_null<PeerData*> peer) {
+		return hideHidden && ayuSettings.isHiddenChat(peer->id.value);
+	};
 	auto added = base::flat_set<not_null<PeerData*>>();
 	for (const auto &sponsored : result.sponsored) {
 		const auto peer = sponsored.peer;
 		if (inlist(peer) || _sponsoredRemoved.contains(peer)) {
+			continue;
+		}
+		if (isHidden(peer)) {
 			continue;
 		}
 		_peerSearchResults.push_back(
@@ -4219,6 +4246,9 @@ void InnerWidget::peerSearchReceived(Api::PeerSearchResult result) {
 	}
 	for (const auto &peer : result.peers) {
 		if (added.contains(peer) || inlist(peer)) {
+			continue;
+		}
+		if (isHidden(peer)) {
 			continue;
 		}
 		_peerSearchResults.push_back(
@@ -4242,7 +4272,12 @@ void InnerWidget::idSearchReceived(
 	}
 
 	_idSearchResults.clear();
+	const auto &ayuSettings = AyuSettings::getInstance();
+	const auto hideHidden = !ayuSettings.hiddenChatsRevealed();
 	for (const auto &peer : results) {
+		if (hideHidden && ayuSettings.isHiddenChat(peer->id.value)) {
+			continue;
+		}
 		_idSearchResults.push_back(
 			std::make_unique<PeerSearchResult>(peer));
 	}

@@ -78,6 +78,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_settings.h"
 #include "styles/style_window.h"
 
+#include "ayu/ayu_settings.h"
+
 namespace Dialogs {
 namespace {
 
@@ -2790,9 +2792,14 @@ rpl::producer<TopPeersList> TopPeersContent(
 		entries.reserve(top.size());
 		indices.reserve(top.size());
 		const auto now = base::unixtime::now();
+		const auto &ayuSettings = AyuSettings::getInstance();
+		const auto hideHidden = !ayuSettings.hiddenChatsRevealed();
 		for (const auto &peer : top) {
 			const auto user = peer->asUser();
 			if (user->isInaccessible()) {
+				continue;
+			}
+			if (hideHidden && ayuSettings.isHiddenChat(peer->id.value)) {
 				continue;
 			}
 			const auto self = user && user->isSelf();
@@ -2914,7 +2921,14 @@ rpl::producer<TopPeersList> TopPeersContent(
 }
 
 RecentPeersList RecentPeersContent(not_null<Main::Session*> session) {
-	return RecentPeersList{ session->recentPeers().list() };
+	auto list = session->recentPeers().list();
+	const auto &ayuSettings = AyuSettings::getInstance();
+	if (!ayuSettings.hiddenChatsRevealed()) {
+		list.erase(ranges::remove_if(list, [&](not_null<PeerData*> peer) {
+			return ayuSettings.isHiddenChat(peer->id.value);
+		}), list.end());
+	}
+	return RecentPeersList{ std::move(list) };
 }
 
 object_ptr<Ui::BoxContent> StarsExamplesBox(

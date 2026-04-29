@@ -65,10 +65,6 @@ struct SectionShow;
 struct SeparateId;
 } // namespace Window
 
-namespace AyuUi {
-class HiddenChatsBar;
-} // namespace AyuUi
-
 namespace Dialogs::Stories {
 class List;
 struct Content;
@@ -213,7 +209,6 @@ private:
 	void setupConnectingWidget();
 	void setupMainMenuToggle();
 	void setupMoreChatsBar();
-	void setupHiddenChatsBar();
 	void setupDownloadBar();
 	void setupShortcuts();
 	void setupStories();
@@ -329,7 +324,6 @@ private:
 	object_ptr<Ui::FadeWrapScaled<Ui::IconButton>> _lockUnlock;
 
 	std::unique_ptr<Ui::MoreChatsBar> _moreChatsBar;
-	std::unique_ptr<AyuUi::HiddenChatsBar> _hiddenChatsBar;
 
 	std::unique_ptr<Ui::PlainShadow> _forumTopShadow;
 	std::unique_ptr<Ui::GroupCallBar> _forumGroupCallBar;
