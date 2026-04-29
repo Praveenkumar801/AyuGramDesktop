@@ -518,6 +518,29 @@ void AddSpyOverridesAction(PeerData *peerData,
 	});
 }
 
+void AddGhostExceptionAction(PeerData *peerData,
+							 not_null<Window::SessionController*> sessionController,
+							 const Window::PeerMenuCallback &addCallback) {
+	if (!peerData) {
+		return;
+	}
+	const auto peerId = peerData->id.value;
+	auto &settings = AyuSettings::getInstance();
+	const auto &ghost = AyuSettings::ghost(&sessionController->session());
+	const auto globalGhostActive = !ghost.sendReadMessages();
+	const auto excepted = settings.isGhostExcepted(peerId);
+	const auto effectiveGhostActive = excepted ? !globalGhostActive : globalGhostActive;
+	addCallback({
+		.text = effectiveGhostActive
+			? tr::ayu_GhostOverrideOn(tr::now)
+			: tr::ayu_GhostOverrideOff(tr::now),
+		.handler = [peerId] {
+			AyuSettings::getInstance().toggleGhostException(peerId);
+		},
+		.icon = &st::menuIconStealth,
+	});
+}
+
 void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 	if (item->hideEditedBadge()) {
 		return;
@@ -920,7 +943,11 @@ void AddReadUntilAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item) {
 	}
 
 	const auto &ghost = AyuSettings::ghost(&item->history()->session());
-	if (ghost.sendReadMessages()) {
+	auto effectiveSendRead = ghost.sendReadMessages();
+	if (AyuSettings::getInstance().isGhostExcepted(item->history()->peer->id.value)) {
+		effectiveSendRead = !effectiveSendRead;
+	}
+	if (effectiveSendRead) {
 		return;
 	}
 

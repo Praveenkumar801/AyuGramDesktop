@@ -8226,6 +8226,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_SpyOverrideSaveDeletedOff" = "Save deleted here";
 "ayu_SpyOverrideSaveEditsOn" = "Don't save edits here";
 "ayu_SpyOverrideSaveEditsOff" = "Save edits here";
+"ayu_GhostOverrideOn" = "Ghost off here";
+"ayu_GhostOverrideOff" = "Ghost on here";
 "ayu_SuggestGhostModeTitle" = "Ghost Mode";
 "ayu_SuggestGhostModeStoryText" = "Do you want to enable **Ghost Mode** before viewing the story?";
 "ayu_SuggestGhostModeStoryActionTextYes" = "Yes";

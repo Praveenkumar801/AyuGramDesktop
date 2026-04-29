@@ -681,20 +681,30 @@ void Histories::sendReadRequests() {
 
 	// AyuGram sendReadMessages
 	const auto &ghost = AyuSettings::ghost(&_owner->session());
-	if (!ghost.sendReadMessages()) {
-		DEBUG_LOG(("[AyuGram] Don't read messages"));
-		_states.clear();
-		return;
-	}
+	const auto &settings = AyuSettings::getInstance();
+	const auto globalSendRead = ghost.sendReadMessages();
 
 	if (_states.empty()) {
 		return;
 	}
 	const auto now = crl::now();
 	auto next = std::optional<crl::time>();
-	for (auto &[history, state] : _states) {
+	for (auto i = _states.begin(); i != _states.end();) {
+		const auto history = i->first;
+		auto &state = i->second;
+		auto effectiveSendRead = globalSendRead;
+		if (settings.isGhostExcepted(history->peer->id.value)) {
+			effectiveSendRead = !effectiveSendRead;
+		}
+		if (!effectiveSendRead) {
+			DEBUG_LOG(("[AyuGram] Don't read messages for peer %1"
+				).arg(history->peer->id.value));
+			i = _states.erase(i);
+			continue;
+		}
 		if (!state.willReadTill) {
 			DEBUG_LOG(("Reading: skipping zero till."));
+			++i;
 			continue;
 		} else if (state.willReadWhen <= now) {
 			DEBUG_LOG(("Reading: sending with till %1."
@@ -704,6 +714,7 @@ void Histories::sendReadRequests() {
 			DEBUG_LOG(("Reading: scheduling for later send."));
 			next = state.willReadWhen;
 		}
+		++i;
 	}
 	if (next.has_value()) {
 		_readRequestsTimer.callOnce(*next - now);

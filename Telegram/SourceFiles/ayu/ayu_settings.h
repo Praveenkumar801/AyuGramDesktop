@@ -265,6 +265,11 @@ public:
 	}
 	void toggleSaveDeletedException(int64 peerId);
 	void toggleSaveMessagesHistoryException(int64 peerId);
+
+	[[nodiscard]] bool isGhostExcepted(int64 peerId) const {
+		return _ghostExceptions.contains(peerId);
+	}
+	void toggleGhostException(int64 peerId);
 	[[nodiscard]] bool saveForBots() const { return _saveForBots.current(); }
 	[[nodiscard]] bool filtersEnabled() const { return _filtersEnabled.current(); }
 	[[nodiscard]] bool filtersEnabledInChats() const { return _filtersEnabledInChats.current(); }
@@ -614,6 +619,7 @@ private:
 	std::unordered_set<int64> _shadowBanIds;
 	std::unordered_set<int64> _saveDeletedExceptions;
 	std::unordered_set<int64> _saveMessagesHistoryExceptions;
+	std::unordered_set<int64> _ghostExceptions;
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _hideFromBlocked = false;

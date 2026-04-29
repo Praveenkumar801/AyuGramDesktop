@@ -100,10 +100,14 @@ void ViewsManager::viewsIncrement() {
 		for (const auto &msgId : i->second) {
 			ids.push_back(MTP_int(msgId));
 		}
+		auto effectiveSendRead = ghost.sendReadMessages();
+		if (AyuSettings::getInstance().isGhostExcepted(i->first->id.value)) {
+			effectiveSendRead = !effectiveSendRead;
+		}
 		const auto requestId = _api.request(MTPmessages_GetMessagesViews(
 			i->first->input(),
 			MTP_vector<MTPint>(ids),
-			MTP_bool(ghost.sendReadMessages())
+			MTP_bool(effectiveSendRead)
 		)).done([=](
 				const MTPmessages_MessageViews &result,
 				mtpRequestId requestId) {

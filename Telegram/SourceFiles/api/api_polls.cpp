@@ -187,7 +187,11 @@ void Polls::sendVotes(
 		_session->updates().applyUpdates(result);
 
 		const auto &ghost = AyuSettings::ghost(_session);
-		if (!ghost.sendReadMessages() && ghost.markReadAfterAction() && item)
+		auto effectiveSendRead = ghost.sendReadMessages();
+		if (item && AyuSettings::getInstance().isGhostExcepted(item->history()->peer->id.value)) {
+			effectiveSendRead = !effectiveSendRead;
+		}
+		if (!effectiveSendRead && ghost.markReadAfterAction() && item)
 		{
 			readHistory(item);
 		}

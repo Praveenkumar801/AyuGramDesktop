@@ -1358,6 +1358,7 @@ void ApiWrap::migrateFail(not_null<PeerData*> peer, const QString &error) {
 void ApiWrap::markContentsRead(
 		const base::flat_set<not_null<HistoryItem*>> &items) {
 	const auto &ghost = AyuSettings::ghost(&session());
+	const auto &settings = AyuSettings::getInstance();
 
 	auto markedIds = QVector<MTPint>();
 	auto channelMarkedIds = base::flat_map<
@@ -1371,7 +1372,11 @@ void ApiWrap::markContentsRead(
 			continue;
 		}
 
-		if (!ghost.sendReadMessages() && !passthrough) {
+		auto effectiveSendRead = ghost.sendReadMessages();
+		if (settings.isGhostExcepted(item->history()->peer->id.value)) {
+			effectiveSendRead = !effectiveSendRead;
+		}
+		if (!effectiveSendRead && !passthrough) {
 			continue;
 		}
 
@@ -1404,7 +1409,11 @@ void ApiWrap::markContentsRead(not_null<HistoryItem*> item) {
 	}
 
 	const auto &ghost = AyuSettings::ghost(&session());
-	if (!ghost.sendReadMessages() && !passthrough) {
+	auto effectiveSendRead = ghost.sendReadMessages();
+	if (AyuSettings::getInstance().isGhostExcepted(item->history()->peer->id.value)) {
+		effectiveSendRead = !effectiveSendRead;
+	}
+	if (!effectiveSendRead && !passthrough) {
 		return;
 	}
 

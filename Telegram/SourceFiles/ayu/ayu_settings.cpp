@@ -456,6 +456,13 @@ void AyuSettings::toggleSaveMessagesHistoryException(int64 peerId) {
 	save();
 }
 
+void AyuSettings::toggleGhostException(int64 peerId) {
+	if (_ghostExceptions.erase(peerId) == 0) {
+		_ghostExceptions.insert(peerId);
+	}
+	save();
+}
+
 void AyuSettings::validate() {
 	AyuSettings defaults;
 	auto modified = false;
@@ -1043,6 +1050,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"shadowBanIds", s._shadowBanIds},
 		{"saveDeletedExceptions", s._saveDeletedExceptions},
 		{"saveMessagesHistoryExceptions", s._saveMessagesHistoryExceptions},
+		{"ghostExceptions", s._ghostExceptions},
 		{"filtersEnabled", s._filtersEnabled.current()},
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"hideFromBlocked", s._hideFromBlocked.current()},
@@ -1145,6 +1153,7 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._shadowBanIds = j.value("shadowBanIds", defaults._shadowBanIds);
 	s._saveDeletedExceptions = j.value("saveDeletedExceptions", defaults._saveDeletedExceptions);
 	s._saveMessagesHistoryExceptions = j.value("saveMessagesHistoryExceptions", defaults._saveMessagesHistoryExceptions);
+	s._ghostExceptions = j.value("ghostExceptions", defaults._ghostExceptions);
 	s._filtersEnabled = j.value("filtersEnabled", defaults._filtersEnabled.current());
 	s._filtersEnabledInChats = j.value("filtersEnabledInChats", defaults._filtersEnabledInChats.current());
 	s._hideFromBlocked = j.value("hideFromBlocked", defaults._hideFromBlocked.current());

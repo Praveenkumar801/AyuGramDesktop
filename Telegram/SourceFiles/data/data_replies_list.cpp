@@ -1010,7 +1010,11 @@ void RepliesList::sendReadTillRequest() {
 	api->request(base::take(_readRequestId)).cancel();
 
 	const auto &ghost = AyuSettings::ghost(&_history->session());
-	if (!ghost.sendReadMessages()) {
+	auto effectiveSendRead = ghost.sendReadMessages();
+	if (AyuSettings::getInstance().isGhostExcepted(_history->peer->id.value)) {
+		effectiveSendRead = !effectiveSendRead;
+	}
+	if (!effectiveSendRead) {
 		return;
 	}
 
