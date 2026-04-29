@@ -3156,7 +3156,13 @@ bool History::trackUnreadMessages() const {
 bool History::shouldBeInChatList() const {
 	if (peer->migrateTo() || !folderKnown()) {
 		return false;
-	} else if (isPinnedDialog(FilterId())) {
+	}
+	const auto &ayuSettings = AyuSettings::getInstance();
+	if (ayuSettings.isHiddenChat(peer->id.value)
+		&& !ayuSettings.hiddenChatsRevealed()) {
+		return false;
+	}
+	if (isPinnedDialog(FilterId())) {
 		return true;
 	} else if (const auto channel = peer->asChannel()) {
 		if (!channel->amIn()) {

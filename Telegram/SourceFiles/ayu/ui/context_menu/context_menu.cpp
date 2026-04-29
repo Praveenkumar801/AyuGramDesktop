@@ -10,6 +10,7 @@
 #include "lang_auto.h"
 #include "mainwidget.h"
 #include "api/api_chat_participants.h"
+#include "api/api_cloud_password.h"
 #include "api/api_sending.h"
 #include "ayu/ayu_settings.h"
 #include "ayu/ayu_state.h"
@@ -23,6 +24,7 @@
 #include "base/call_delayed.h"
 #include "base/random.h"
 #include "base/unixtime.h"
+#include "core/core_cloud_password.h"
 #include "core/mime_type.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
@@ -38,6 +40,7 @@
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/toast/toast.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "window/window_peer_menu.h"
@@ -538,6 +541,35 @@ void AddGhostExceptionAction(PeerData *peerData,
 			AyuSettings::getInstance().toggleGhostException(peerId);
 		},
 		.icon = &st::menuIconStealth,
+	});
+}
+
+void AddHideChatAction(PeerData *peerData,
+					   not_null<Window::SessionController*> sessionController,
+					   const Window::PeerMenuCallback &addCallback) {
+	if (!peerData) {
+		return;
+	}
+	const auto peerId = peerData->id.value;
+	const auto hidden = AyuSettings::getInstance().isHiddenChat(peerId);
+	const auto session = &sessionController->session();
+	addCallback({
+		.text = hidden
+			? tr::ayu_UnhideChat(tr::now)
+			: tr::ayu_HideChat(tr::now),
+		.handler = [peerId, session, hidden] {
+			if (!hidden) {
+				const auto state = session->api().cloudPassword().stateCurrent();
+				if (!state || !state->hasPassword) {
+					Ui::Toast::Show(tr::ayu_HiddenChatsNeed2FA(tr::now));
+					return;
+				}
+			}
+			AyuSettings::getInstance().toggleHiddenChat(peerId);
+		},
+		.icon = hidden
+			? &st::menuIconShowInChat
+			: &st::menuIconBlock,
 	});
 }
 

@@ -14,6 +14,10 @@
 #include "core/application.h"
 #include "features/filters/filters_cache_controller.h"
 #include "features/translator/ayu_translator.h"
+#include "base/timer.h"
+#include "data/data_session.h"
+#include "history/history.h"
+#include "main/main_account.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
 #include "platform/platform_translate_provider.h"
@@ -38,6 +42,13 @@ void repaintApp() {
 }
 
 rpl::lifetime lifetime; // idk reactivity dies when placed in `GhostModeAccountSettings` as field
+
+base::Timer &hiddenChatsAutoLockTimer() {
+	static base::Timer timer([] {
+		AyuSettings::getInstance().setHiddenChatsRevealed(false);
+	});
+	return timer;
+}
 
 } // namespace
 
@@ -461,6 +472,65 @@ void AyuSettings::toggleGhostException(int64 peerId) {
 		_ghostExceptions.insert(peerId);
 	}
 	save();
+}
+
+void AyuSettings::toggleHiddenChat(int64 peerId) {
+	if (_hiddenChatIds.erase(peerId) == 0) {
+		_hiddenChatIds.insert(peerId);
+	}
+	save();
+	refreshHiddenChatList(peerId);
+}
+
+void AyuSettings::setHiddenChatsSecret(const QString &val) {
+	if (_hiddenChatsSecret.current() == val) return;
+	_hiddenChatsSecret = val;
+	save();
+}
+
+void AyuSettings::setHiddenChatsAutoLockSeconds(int val) {
+	if (_hiddenChatsAutoLockSeconds.current() == val) return;
+	_hiddenChatsAutoLockSeconds = val;
+	save();
+}
+
+void AyuSettings::setHiddenChatsRevealed(bool val) {
+	if (_hiddenChatsRevealed.current() == val) return;
+	_hiddenChatsRevealed = val;
+	// transient — never saved
+	refreshHiddenChatList();
+	auto &timer = hiddenChatsAutoLockTimer();
+	if (val && _hiddenChatsAutoLockSeconds.current() > 0) {
+		timer.callOnce(_hiddenChatsAutoLockSeconds.current() * crl::time(1000));
+	} else {
+		timer.cancel();
+	}
+}
+
+void AyuSettings::refreshHiddenChatList(int64 onlyPeerId) {
+	for (const auto &[index, account] : Core::App().domain().accounts()) {
+		const auto session = account->maybeSession();
+		if (!session) {
+			continue;
+		}
+		auto &data = session->data();
+		const auto refreshOne = [&](int64 peerIdValue) {
+			const auto peer = data.peerLoaded(PeerId(peerIdValue));
+			if (!peer) {
+				return;
+			}
+			if (const auto history = data.historyLoaded(peer)) {
+				history->updateChatListExistence();
+			}
+		};
+		if (onlyPeerId) {
+			refreshOne(onlyPeerId);
+		} else {
+			for (const auto id : _hiddenChatIds) {
+				refreshOne(id);
+			}
+		}
+	}
 }
 
 void AyuSettings::validate() {
@@ -1051,6 +1121,9 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"saveDeletedExceptions", s._saveDeletedExceptions},
 		{"saveMessagesHistoryExceptions", s._saveMessagesHistoryExceptions},
 		{"ghostExceptions", s._ghostExceptions},
+		{"hiddenChatIds", s._hiddenChatIds},
+		{"hiddenChatsSecret", s._hiddenChatsSecret.current()},
+		{"hiddenChatsAutoLockSeconds", s._hiddenChatsAutoLockSeconds.current()},
 		{"filtersEnabled", s._filtersEnabled.current()},
 		{"filtersEnabledInChats", s._filtersEnabledInChats.current()},
 		{"hideFromBlocked", s._hideFromBlocked.current()},
@@ -1154,6 +1227,9 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._saveDeletedExceptions = j.value("saveDeletedExceptions", defaults._saveDeletedExceptions);
 	s._saveMessagesHistoryExceptions = j.value("saveMessagesHistoryExceptions", defaults._saveMessagesHistoryExceptions);
 	s._ghostExceptions = j.value("ghostExceptions", defaults._ghostExceptions);
+	s._hiddenChatIds = j.value("hiddenChatIds", defaults._hiddenChatIds);
+	s._hiddenChatsSecret = j.value("hiddenChatsSecret", defaults._hiddenChatsSecret.current());
+	s._hiddenChatsAutoLockSeconds = j.value("hiddenChatsAutoLockSeconds", defaults._hiddenChatsAutoLockSeconds.current());
 	s._filtersEnabled = j.value("filtersEnabled", defaults._filtersEnabled.current());
 	s._filtersEnabledInChats = j.value("filtersEnabledInChats", defaults._filtersEnabledInChats.current());
 	s._hideFromBlocked = j.value("hideFromBlocked", defaults._hideFromBlocked.current());

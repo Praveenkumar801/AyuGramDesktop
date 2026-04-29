@@ -3498,6 +3498,20 @@ QString Widget::validateSearchQuery() {
 void Widget::applySearchUpdate() {
 	auto copy = _searchState;
 	copy.query = validateSearchQuery();
+
+	// AyuGram hidden chats: typing the secret code reveals hidden chats
+	// and clears the search field instead of running a search.
+	{
+		auto &ayuSettings = AyuSettings::getInstance();
+		const auto &secret = ayuSettings.hiddenChatsSecret();
+		if (!secret.isEmpty() && copy.query == secret) {
+			ayuSettings.setHiddenChatsRevealed(!ayuSettings.hiddenChatsRevealed());
+			clearSearchField();
+			_lastSearchText = QString();
+			return;
+		}
+	}
+
 	applySearchState(std::move(copy));
 
 	if (_chooseFromUser->toggled()

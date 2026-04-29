@@ -270,6 +270,26 @@ public:
 		return _ghostExceptions.contains(peerId);
 	}
 	void toggleGhostException(int64 peerId);
+
+	// Hidden chats: peers excluded from the dialogs list until the user types
+	// a secret code in the search bar; auto-locks back after a timeout.
+	[[nodiscard]] bool isHiddenChat(int64 peerId) const {
+		return _hiddenChatIds.contains(peerId);
+	}
+	[[nodiscard]] const std::unordered_set<int64> &hiddenChatIds() const { return _hiddenChatIds; }
+	void toggleHiddenChat(int64 peerId);
+
+	[[nodiscard]] const QString &hiddenChatsSecret() const { return _hiddenChatsSecret.current(); }
+	[[nodiscard]] rpl::producer<QString> hiddenChatsSecretValue() const { return _hiddenChatsSecret.value(); }
+	void setHiddenChatsSecret(const QString &val);
+
+	[[nodiscard]] int hiddenChatsAutoLockSeconds() const { return _hiddenChatsAutoLockSeconds.current(); }
+	[[nodiscard]] rpl::producer<int> hiddenChatsAutoLockSecondsValue() const { return _hiddenChatsAutoLockSeconds.value(); }
+	void setHiddenChatsAutoLockSeconds(int val);
+
+	[[nodiscard]] bool hiddenChatsRevealed() const { return _hiddenChatsRevealed.current(); }
+	[[nodiscard]] rpl::producer<bool> hiddenChatsRevealedValue() const { return _hiddenChatsRevealed.value(); }
+	void setHiddenChatsRevealed(bool val);
 	[[nodiscard]] bool saveForBots() const { return _saveForBots.current(); }
 	[[nodiscard]] bool filtersEnabled() const { return _filtersEnabled.current(); }
 	[[nodiscard]] bool filtersEnabledInChats() const { return _filtersEnabledInChats.current(); }
@@ -613,6 +633,8 @@ private:
 
 	[[nodiscard]] uint64 getOverriddenGhostUserId(uint64 userId) const { return _useGlobalGhostMode.current() ? 0 : userId; }
 
+	void refreshHiddenChatList(int64 onlyPeerId = 0);
+
 	rpl::variable<bool> _saveDeletedMessages = true;
 	rpl::variable<bool> _saveMessagesHistory = true;
 	rpl::variable<bool> _saveForBots = false;
@@ -620,6 +642,10 @@ private:
 	std::unordered_set<int64> _saveDeletedExceptions;
 	std::unordered_set<int64> _saveMessagesHistoryExceptions;
 	std::unordered_set<int64> _ghostExceptions;
+	std::unordered_set<int64> _hiddenChatIds;
+	rpl::variable<QString> _hiddenChatsSecret;
+	rpl::variable<int> _hiddenChatsAutoLockSeconds = 300;
+	rpl::variable<bool> _hiddenChatsRevealed = false;
 	rpl::variable<bool> _filtersEnabled = false;
 	rpl::variable<bool> _filtersEnabledInChats = false;
 	rpl::variable<bool> _hideFromBlocked = false;

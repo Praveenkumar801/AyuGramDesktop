@@ -1812,6 +1812,7 @@ void Filler::fillProfileActions() {
 	AyuUi::AddBanDeletedAccountsAction(_peer, _controller, _addAction);
 	AyuUi::AddSpyOverridesAction(_peer, _controller, _addAction);
 	AyuUi::AddGhostExceptionAction(_peer, _controller, _addAction);
+	AyuUi::AddHideChatAction(_peer, _controller, _addAction);
 	addViewDiscussion();
 	addDirectMessages();
 	addExportChat();

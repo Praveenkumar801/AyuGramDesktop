@@ -7,12 +7,17 @@
 #include "ayu/ui/settings/settings_ayu.h"
 
 #include "lang_auto.h"
+#include "api/api_cloud_password.h"
+#include "apiwrap.h"
 #include "ayu/ayu_settings.h"
 #include "ayu/ui/ayu_userpic.h"
+#include "ayu/ui/boxes/edit_mark_box.h"
 #include "ayu/ui/settings/ayu_builder.h"
 #include "ayu/ui/settings/settings_ayu_utils.h"
 #include "ayu/ui/settings/settings_main.h"
+#include "boxes/passcode_box.h"
 #include "boxes/peer_list_box.h"
+#include "core/core_cloud_password.h"
 #include "core/application.h"
 #include "data/data_user.h"
 #include "main/main_account.h"
@@ -555,6 +560,101 @@ void BuildSpyEssentials(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	});
 }
 
+void OpenHiddenChatsSecretEditor(
+		not_null<Window::SessionController*> controller) {
+	auto *settings = &AyuSettings::getInstance();
+	auto box = Box<EditMarkBox>(
+		tr::ayu_HiddenChatsSecret(),
+		settings->hiddenChatsSecret(),
+		QString(),
+		[](const QString &value) {
+			AyuSettings::getInstance().setHiddenChatsSecret(value);
+		});
+	controller->show(std::move(box));
+}
+
+void RequestHiddenChatsSecretChange(
+		not_null<Window::SessionController*> controller) {
+	auto *settings = &AyuSettings::getInstance();
+	const auto session = &controller->session();
+	const auto state = session->api().cloudPassword().stateCurrent();
+	if (!state || !state->hasPassword) {
+		Ui::Toast::Show(tr::ayu_HiddenChatsNeed2FA(tr::now));
+		return;
+	}
+	if (settings->hiddenChatsSecret().isEmpty()) {
+		// First-time setup: skip 2FA verification, just set the code.
+		OpenHiddenChatsSecretEditor(controller);
+		return;
+	}
+	session->api().cloudPassword().state(
+	) | rpl::take(
+		1
+	) | rpl::start_with_next([=](const Core::CloudPasswordState &state) {
+		auto fields = PasscodeBox::CloudFields::From(state);
+		fields.customTitle = tr::ayu_HiddenChatsTitle();
+		fields.customDescription = tr::ayu_HiddenChatsSecret2FAPrompt(tr::now);
+		fields.customSubmitButton = tr::lng_passcode_submit();
+		fields.customCheckCallback = [=](
+				const Core::CloudPasswordResult &,
+				base::weak_qptr<PasscodeBox> box) {
+			if (const auto strong = box.get()) {
+				strong->closeBox();
+			}
+			OpenHiddenChatsSecretEditor(controller);
+		};
+		controller->show(Box<PasscodeBox>(session, fields));
+	}, controller->lifetime());
+}
+
+void BuildHiddenChats(SectionBuilder &builder, AyuSectionBuilder &ayu) {
+	auto *settings = &AyuSettings::getInstance();
+	const auto controller = builder.controller();
+
+	builder.addSubsectionTitle(tr::ayu_HiddenChatsTitle());
+
+	builder.addButton({
+		.id = u"ayu/hiddenChatsSecret"_q,
+		.title = tr::ayu_HiddenChatsSecret(),
+		.st = &st::settingsButtonNoIcon,
+		.label = settings->hiddenChatsSecretValue(),
+		.onClick = [=] {
+			RequestHiddenChatsSecretChange(controller);
+		},
+	});
+
+	ayu.addSlider({
+		.id = u"ayu/hiddenChatsAutoLockSeconds"_q,
+		.title = tr::ayu_HiddenChatsAutoLock(),
+		.steps = 12,
+		.current = settings->hiddenChatsAutoLockSeconds(),
+		.indexToValue = [](int index) {
+			static constexpr int kSteps[] = {
+				15, 30, 60, 120, 180, 300, 600, 900, 1800, 3600, 7200, 0
+			};
+			return kSteps[std::clamp(index, 0, 11)];
+		},
+		.onChanged = nullptr,
+		.onFinalChanged = [](int seconds) {
+			AyuSettings::getInstance().setHiddenChatsAutoLockSeconds(seconds);
+		},
+		.formatLabel = [](int seconds) {
+			if (seconds <= 0) {
+				return tr::ayu_HiddenChatsAutoLockNever(tr::now);
+			} else if (seconds < 60) {
+				return QString("%1s").arg(seconds);
+			} else if (seconds < 3600) {
+				return QString("%1m").arg(seconds / 60);
+			}
+			return QString("%1h").arg(seconds / 3600);
+		},
+	});
+
+	builder.addSkip();
+	builder.addDividerText(tr::ayu_HiddenChatsAbout());
+	builder.addSkip();
+}
+
 void BuildOther(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 	builder.addSubsectionTitle(tr::ayu_MessageSavingOtherHeader());
 
@@ -585,6 +685,9 @@ const auto kMeta = BuildHelper({
 
 	builder.addSkip();
 	BuildSpyEssentials(builder, ayu);
+
+	ayu.addSectionDivider();
+	BuildHiddenChats(builder, ayu);
 
 	ayu.addSectionDivider();
 	BuildOther(builder, ayu);

@@ -49,6 +49,9 @@ void AddSpyOverridesAction(PeerData *peerData,
 void AddGhostExceptionAction(PeerData *peerData,
 							 not_null<Window::SessionController*> sessionController,
 							 const Window::PeerMenuCallback &addCallback);
+void AddHideChatAction(PeerData *peerData,
+					   not_null<Window::SessionController*> sessionController,
+					   const Window::PeerMenuCallback &addCallback);
 
 void AddHistoryAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
 void AddHideMessageAction(not_null<Ui::PopupMenu*> menu, HistoryItem *item);
