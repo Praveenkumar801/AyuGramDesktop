@@ -1007,6 +1007,9 @@ static bool prependPseudoReplyImpl(
 	if (!replyTo) {
 		return false;
 	}
+	if (!AyuSettings::getInstance().sendPseudoReplyToDeleted()) {
+		return false;
+	}
 	const auto replyItem = session->data().message(replyTo.messageId);
 	if (!replyItem || !replyItem->isDeleted()) {
 		return false;

@@ -558,6 +558,12 @@ void BuildSpyEssentials(SectionBuilder &builder, AyuSectionBuilder &ayu) {
 		.getter = &AyuSettings::saveForBots,
 		.setter = &AyuSettings::setSaveForBots,
 	});
+	ayu.addSettingToggle({
+		.id = u"ayu/sendPseudoReplyToDeleted"_q,
+		.title = tr::ayu_SendPseudoReplyToDeleted(),
+		.getter = &AyuSettings::sendPseudoReplyToDeleted,
+		.setter = &AyuSettings::setSendPseudoReplyToDeleted,
+	});
 }
 
 void OpenHiddenChatsSecretEditor(

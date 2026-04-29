@@ -605,6 +605,12 @@ void AyuSettings::setSaveForBots(bool val) {
 	save();
 }
 
+void AyuSettings::setSendPseudoReplyToDeleted(bool val) {
+	if (_sendPseudoReplyToDeleted.current() == val) return;
+	_sendPseudoReplyToDeleted = val;
+	save();
+}
+
 void AyuSettings::setFiltersEnabled(bool val) {
 	if (_filtersEnabled.current() == val) return;
 	_filtersEnabled = val;
@@ -1117,6 +1123,7 @@ void to_json(nlohmann::json &j, const AyuSettings &s) {
 		{"saveDeletedMessages", s._saveDeletedMessages.current()},
 		{"saveMessagesHistory", s._saveMessagesHistory.current()},
 		{"saveForBots", s._saveForBots.current()},
+		{"sendPseudoReplyToDeleted", s._sendPseudoReplyToDeleted.current()},
 		{"shadowBanIds", s._shadowBanIds},
 		{"saveDeletedExceptions", s._saveDeletedExceptions},
 		{"saveMessagesHistoryExceptions", s._saveMessagesHistoryExceptions},
@@ -1223,6 +1230,7 @@ void from_json(const nlohmann::json &j, AyuSettings &s) {
 	s._saveDeletedMessages = j.value("saveDeletedMessages", defaults._saveDeletedMessages.current());
 	s._saveMessagesHistory = j.value("saveMessagesHistory", defaults._saveMessagesHistory.current());
 	s._saveForBots = j.value("saveForBots", defaults._saveForBots.current());
+	s._sendPseudoReplyToDeleted = j.value("sendPseudoReplyToDeleted", defaults._sendPseudoReplyToDeleted.current());
 	s._shadowBanIds = j.value("shadowBanIds", defaults._shadowBanIds);
 	s._saveDeletedExceptions = j.value("saveDeletedExceptions", defaults._saveDeletedExceptions);
 	s._saveMessagesHistoryExceptions = j.value("saveMessagesHistoryExceptions", defaults._saveMessagesHistoryExceptions);

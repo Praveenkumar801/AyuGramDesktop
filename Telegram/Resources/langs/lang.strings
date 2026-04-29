@@ -7957,6 +7957,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "ayu_MaximumMediaSizeWiFi" = "Media size limit (WiFi)";
 "ayu_MessageSavingOtherHeader" = "Other";
 "ayu_MessageSavingSaveForBots" = "Save in Bot Dialogs";
+"ayu_SendPseudoReplyToDeleted" = "Quote Deleted Messages in Replies";
 "ayu_MessageSavingSavePath" = "Attachments Folder";
 "ayu_MessageSavingSavePathTitle" = "Choose folder";
 "ayu_SpySaveReadMarks" = "Save Read Date";
