@@ -36,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_instance.h"
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
+#include "menu/menu_checked_action.h"
 #include "main/main_account.h"
 #include "main/main_app_config.h"
 #include "main/main_domain.h"
@@ -896,6 +897,7 @@ void SetupValidatePhoneNumberSuggestion(
 		wrap,
 		tr::lng_box_yes(),
 		st::inviteLinkButton);
+	yes->setFullRadius(true);
 	yes->setClickedCallback([=] {
 		controller->session().promoSuggestions().dismiss(
 			kSugValidatePhone.utf8());
@@ -905,6 +907,7 @@ void SetupValidatePhoneNumberSuggestion(
 		wrap,
 		tr::lng_box_no(),
 		st::inviteLinkButton);
+	no->setFullRadius(true);
 	no->setClickedCallback([=] {
 		const auto sharedLabel = std::make_shared<base::weak_qptr<Ui::FlatLabel>>();
 		const auto height = st::boxLabel.style.font->height;
@@ -996,6 +999,7 @@ void SetupValidatePasswordSuggestion(
 		wrap,
 		tr::lng_settings_suggestion_password_yes(),
 		st::inviteLinkButton);
+	yes->setFullRadius(true);
 	yes->setClickedCallback([=] {
 		controller->session().promoSuggestions().dismiss(
 			Data::PromoSuggestions::SugValidatePassword());
@@ -1005,6 +1009,7 @@ void SetupValidatePasswordSuggestion(
 		wrap,
 		tr::lng_settings_suggestion_password_no(),
 		st::inviteLinkButton);
+	no->setFullRadius(true);
 	no->setClickedCallback([=] {
 		showOther(Settings::CloudPasswordSuggestionInputId());
 	});
