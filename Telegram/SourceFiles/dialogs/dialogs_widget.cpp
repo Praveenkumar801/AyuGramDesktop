@@ -1133,71 +1133,63 @@ void Widget::setupScrollUpButton() {
 }
 
 void Widget::setupMultiSelectBar() {
+	const auto countLabel = lifetime().make_state<int>(0);
+
 	_inner->multiSelectCountChanges(
 	) | rpl::on_next([=](int count) {
+		*countLabel = count;
 		if (count > 0 && !_multiSelectBar) {
 			_multiSelectBar.create(this);
 			const auto bar = _multiSelectBar.data();
 			const auto barHeight = st::topBarHeight;
-			bar->resize(width(), barHeight);
+
 			bar->paintRequest(
 			) | rpl::on_next([=] {
 				auto p = QPainter(bar);
 				p.fillRect(bar->rect(), st::dialogsBg);
-				p.setPen(st::shadowFg);
-				p.drawLine(0, 0, bar->width(), 0);
+				p.setPen(st::dialogsNameFg);
+				p.setFont(st::semiboldFont);
+				const auto text = QString::number(*countLabel)
+					+ " selected";
+				p.drawText(
+					st::dialogsFilterPadding.x(),
+					0,
+					bar->width() / 2,
+					barHeight,
+					Qt::AlignVCenter | Qt::AlignLeft,
+					text);
 			}, bar->lifetime());
-
-			const auto makeButton = [&](
-					int index,
-					const style::icon &icon,
-					Fn<void()> callback) {
-				const auto btn = Ui::CreateChild<Ui::IconButton>(
-					bar,
-					st::historyAttach);
-				btn->setIconOverride(&icon);
-				btn->setClickedCallback(std::move(callback));
-				bar->widthValue(
-				) | rpl::on_next([=](int w) {
-					const auto bw = w / 5;
-					btn->resize(bw, barHeight);
-					btn->moveToLeft(index * bw, 0);
-				}, btn->lifetime());
-				return btn;
-			};
 
 			const auto inner = _inner;
 			const auto ctrl = controller();
 			const auto show = ctrl->uiShow();
 
-			makeButton(0, st::menuIconArchive, [=] {
-				const auto keys = inner->multiSelected();
-				for (const auto &key : keys) {
-					if (const auto history = key.history()) {
-						Window::ToggleHistoryArchived(
-							show,
-							history,
-							true);
-					}
-				}
+			const auto btnSize = barHeight;
+			const auto makeButton = [&](
+					const style::icon &icon,
+					Fn<void()> callback) {
+				const auto btn = Ui::CreateChild<Ui::IconButton>(
+					bar,
+					st::dialogsMenuToggle);
+				btn->setIconOverride(&icon);
+				btn->setClickedCallback(std::move(callback));
+				return btn;
+			};
+
+			const auto cancelBtn = makeButton(st::menuIconCancel, [=] {
 				inner->clearMultiSelect();
 			});
-			makeButton(1, st::menuIconMute, [=] {
+			const auto markReadBtn = makeButton(
+				st::menuIconMarkRead, [=] {
 				const auto keys = inner->multiSelected();
 				for (const auto &key : keys) {
 					if (const auto thread = key.thread()) {
-						const auto &settings = thread->owner().notifySettings();
-						const auto muted = settings.isMuted(thread);
-						thread->owner().notifySettings().update(
-							thread,
-							muted
-								? Data::MuteValue{ .unmute = true }
-								: Data::MuteValue{ .forever = true });
+						Window::MarkAsReadThread(thread);
 					}
 				}
 				inner->clearMultiSelect();
 			});
-			makeButton(2, st::menuIconPin, [=] {
+			const auto pinBtn = makeButton(st::menuIconPin, [=] {
 				const auto keys = inner->multiSelected();
 				const auto filterId = inner->filterId();
 				for (const auto &key : keys) {
@@ -1210,36 +1202,61 @@ void Widget::setupMultiSelectBar() {
 				}
 				inner->clearMultiSelect();
 			});
-			makeButton(3, st::menuIconMarkRead, [=] {
+			const auto muteBtn = makeButton(st::menuIconMute, [=] {
 				const auto keys = inner->multiSelected();
 				for (const auto &key : keys) {
 					if (const auto thread = key.thread()) {
-						Window::MarkAsReadThread(thread);
+						const auto &settings
+							= thread->owner().notifySettings();
+						const auto muted = settings.isMuted(thread);
+						thread->owner().notifySettings().update(
+							thread,
+							muted
+								? Data::MuteValue{ .unmute = true }
+								: Data::MuteValue{ .forever = true });
 					}
 				}
 				inner->clearMultiSelect();
 			});
-			makeButton(4, st::menuIconCancel, [=] {
+			const auto archiveBtn = makeButton(
+				st::menuIconArchive, [=] {
+				const auto keys = inner->multiSelected();
+				for (const auto &key : keys) {
+					if (const auto history = key.history()) {
+						Window::ToggleHistoryArchived(
+							show,
+							history,
+							true);
+					}
+				}
 				inner->clearMultiSelect();
 			});
 
-			bar->moveToLeft(0, height() - barHeight);
+			bar->widthValue(
+			) | rpl::on_next([=](int w) {
+				auto right = st::dialogsFilterPadding.x();
+				cancelBtn->moveToRight(right, 0);
+				right += cancelBtn->width();
+				markReadBtn->moveToRight(right, 0);
+				right += markReadBtn->width();
+				pinBtn->moveToRight(right, 0);
+				right += pinBtn->width();
+				muteBtn->moveToRight(right, 0);
+				right += muteBtn->width();
+				archiveBtn->moveToRight(right, 0);
+			}, bar->lifetime());
+
+			bar->setGeometry(_searchControls->geometry());
+			_searchControls->hide();
 			bar->show();
 			bar->raise();
 		} else if (count == 0 && _multiSelectBar) {
 			_multiSelectBar.destroy();
+			_searchControls->show();
+		} else if (count > 0 && _multiSelectBar) {
+			_multiSelectBar->update();
 		}
 	}, _inner->lifetime());
-
-	widthValue(
-	) | rpl::on_next([=](int w) {
-		if (_multiSelectBar) {
-			_multiSelectBar->resize(w, st::topBarHeight);
-			_multiSelectBar->moveToLeft(
-				0,
-				height() - st::topBarHeight);
-		}
-	}, lifetime());
 }
 
 void Widget::setupTouchChatPreview() {
@@ -1773,7 +1790,8 @@ void Widget::updateControlsVisibility(bool fast) {
 	if (_updateTelegram) {
 		_updateTelegram->show();
 	}
-	_searchControls->setVisible(!_openedFolder && !_openedForum);
+	_searchControls->setVisible(
+		!_openedFolder && !_openedForum && !_multiSelectBar);
 	if (_moreChatsBar) {
 		_moreChatsBar->show();
 	}
@@ -4199,6 +4217,9 @@ void Widget::updateControlsGeometry() {
 	const auto filterWidth = qMax(ratiow, smallw) - filterLeft - filterRight;
 	const auto filterAreaHeight = st::topBarHeight;
 	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
+	if (_multiSelectBar) {
+		_multiSelectBar->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
+	}
 	if (_subsectionTopBar) {
 		_subsectionTopBar->setGeometryWithNarrowRatio(
 			_searchControls->geometry(),
