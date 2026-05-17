@@ -993,6 +993,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		context.topicJumpSelected = selected
 			&& _selectedTopicJump
 			&& (!_pressed || _pressedTopicJump);
+		context.multiSelected = _multiSelected.contains(row->key());
 		Ui::RowPainter::Paint(p, row, validateVideoUserpic(row), context);
 		if (context.quickActionContext) {
 			context.quickActionContext = nullptr;
@@ -2747,6 +2748,22 @@ void InnerWidget::mousePressReleased(
 				}
 			} else if (pressedRightButton && peerSearchPressed >= 0) {
 				showSponsoredMenu(peerSearchPressed, globalPosition);
+			} else if ((modifiers & Qt::ControlModifier)
+				|| inMultiSelectMode()) {
+				const auto key = [&]() -> Key {
+					if (pressed) {
+						return pressed->key();
+					} else if (base::in_range(
+							filteredPressed,
+							0,
+							int(_filterResults.size()))) {
+						return _filterResults[filteredPressed].key();
+					}
+					return Key();
+				}();
+				if (key) {
+					toggleMultiSelect(key);
+				}
 			} else {
 				chooseRow(
 					modifiers,
@@ -3321,6 +3338,40 @@ void InnerWidget::clearSelection() {
 			= -1;
 		setCursor(style::cur_default);
 	}
+}
+
+void InnerWidget::toggleMultiSelect(Key key) {
+	if (!key) {
+		return;
+	}
+	if (_multiSelected.contains(key)) {
+		_multiSelected.remove(key);
+	} else {
+		_multiSelected.emplace(key);
+	}
+	_multiSelectCountChanges.fire(int(_multiSelected.size()));
+	update();
+}
+
+void InnerWidget::clearMultiSelect() {
+	if (_multiSelected.empty()) {
+		return;
+	}
+	_multiSelected.clear();
+	_multiSelectCountChanges.fire(0);
+	update();
+}
+
+bool InnerWidget::inMultiSelectMode() const {
+	return !_multiSelected.empty();
+}
+
+const base::flat_set<Key> &InnerWidget::multiSelected() const {
+	return _multiSelected;
+}
+
+rpl::producer<int> InnerWidget::multiSelectCountChanges() const {
+	return _multiSelectCountChanges.events();
 }
 
 void InnerWidget::fillSupportSearchMenu(not_null<Ui::PopupMenu*> menu) {

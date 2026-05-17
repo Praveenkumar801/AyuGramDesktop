@@ -64,6 +64,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_slide_animation.h"
 #include "window/window_connecting_widget.h"
 #include "window/window_main_menu.h"
+#include "window/window_peer_menu.h"
 #include "storage/storage_media_prepare.h"
 #include "storage/storage_account.h"
 #include "storage/storage_domain.h"
@@ -77,6 +78,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_folder.h"
 #include "data/data_forum.h"
 #include "data/data_forum_topic.h"
+#include "data/notify/data_notify_settings.h"
+#include "data/notify/data_peer_notify_settings.h"
 #include "data/data_histories.h"
 #include "data/data_changes.h"
 #include "data/data_download_manager.h"
@@ -92,6 +95,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat_helpers.h"
 #include "styles/style_info.h"
 #include "styles/style_window.h"
+#include "styles/style_menu_icons.h"
 #include "base/qt/qt_common_adapters.h"
 
 #include <QtCore/QMimeData>
@@ -724,6 +728,7 @@ Widget::Widget(
 	updateSearchFromVisibility(true);
 	setupSupportMode();
 	setupScrollUpButton();
+	setupMultiSelectBar();
 	setupTouchChatPreview();
 
 	const auto overscrollBg = [=] {
@@ -1125,6 +1130,116 @@ void Widget::setupScrollUpButton() {
 	trackScroll(_scrollToTop);
 	trackScroll(this);
 	updateScrollUpVisibility();
+}
+
+void Widget::setupMultiSelectBar() {
+	_inner->multiSelectCountChanges(
+	) | rpl::on_next([=](int count) {
+		if (count > 0 && !_multiSelectBar) {
+			_multiSelectBar.create(this);
+			const auto bar = _multiSelectBar.data();
+			const auto barHeight = st::topBarHeight;
+			bar->resize(width(), barHeight);
+			bar->paintRequest(
+			) | rpl::on_next([=] {
+				auto p = QPainter(bar);
+				p.fillRect(bar->rect(), st::dialogsBg);
+				p.setPen(st::shadowFg);
+				p.drawLine(0, 0, bar->width(), 0);
+			}, bar->lifetime());
+
+			const auto makeButton = [&](
+					int index,
+					const style::icon &icon,
+					Fn<void()> callback) {
+				const auto btn = Ui::CreateChild<Ui::IconButton>(
+					bar,
+					st::historyAttach);
+				btn->setIconOverride(&icon);
+				btn->setClickedCallback(std::move(callback));
+				bar->widthValue(
+				) | rpl::on_next([=](int w) {
+					const auto bw = w / 5;
+					btn->resize(bw, barHeight);
+					btn->moveToLeft(index * bw, 0);
+				}, btn->lifetime());
+				return btn;
+			};
+
+			const auto inner = _inner;
+			const auto ctrl = controller();
+			const auto show = ctrl->uiShow();
+
+			makeButton(0, st::menuIconArchive, [=] {
+				const auto keys = inner->multiSelected();
+				for (const auto &key : keys) {
+					if (const auto history = key.history()) {
+						Window::ToggleHistoryArchived(
+							show,
+							history,
+							true);
+					}
+				}
+				inner->clearMultiSelect();
+			});
+			makeButton(1, st::menuIconMute, [=] {
+				const auto keys = inner->multiSelected();
+				for (const auto &key : keys) {
+					if (const auto thread = key.thread()) {
+						const auto &settings = thread->owner().notifySettings();
+						const auto muted = settings.isMuted(thread);
+						thread->owner().notifySettings().update(
+							thread,
+							muted
+								? Data::MuteValue{ .unmute = true }
+								: Data::MuteValue{ .forever = true });
+					}
+				}
+				inner->clearMultiSelect();
+			});
+			makeButton(2, st::menuIconPin, [=] {
+				const auto keys = inner->multiSelected();
+				const auto filterId = inner->filterId();
+				for (const auto &key : keys) {
+					const auto entry = key.entry();
+					Window::TogglePinnedThread(
+						ctrl,
+						entry,
+						filterId,
+						nullptr);
+				}
+				inner->clearMultiSelect();
+			});
+			makeButton(3, st::menuIconMarkRead, [=] {
+				const auto keys = inner->multiSelected();
+				for (const auto &key : keys) {
+					if (const auto thread = key.thread()) {
+						Window::MarkAsReadThread(thread);
+					}
+				}
+				inner->clearMultiSelect();
+			});
+			makeButton(4, st::menuIconCancel, [=] {
+				inner->clearMultiSelect();
+			});
+
+			bar->moveToLeft(0, height() - barHeight);
+			bar->show();
+			bar->raise();
+		} else if (count == 0 && _multiSelectBar) {
+			_multiSelectBar.destroy();
+		}
+	}, _inner->lifetime());
+
+	widthValue(
+	) | rpl::on_next([=](int w) {
+		if (_multiSelectBar) {
+			_multiSelectBar->resize(w, st::topBarHeight);
+			_multiSelectBar->moveToLeft(
+				0,
+				height() - st::topBarHeight);
+		}
+	}, lifetime());
 }
 
 void Widget::setupTouchChatPreview() {

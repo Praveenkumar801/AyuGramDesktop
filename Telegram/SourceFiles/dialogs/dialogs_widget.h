@@ -281,6 +281,7 @@ private:
 	void scrollToDefault(bool verytop = false);
 	void scrollToDefaultChecked(bool verytop = false);
 	void setupScrollUpButton();
+	void setupMultiSelectBar();
 	void updateScrollUpVisibility();
 	void startScrollUpButtonAnimation(bool shown);
 	void updateScrollUpPosition();
@@ -355,6 +356,7 @@ private:
 
 	Ui::Animations::Simple _scrollToTopShown;
 	object_ptr<Ui::JumpDownButton> _scrollToTop;
+	object_ptr<Ui::RpWidget> _multiSelectBar = { nullptr };
 	bool _scrollToTopIsShown = false;
 	bool _forumSearchRequested = false;
 	HashOrCashtag _searchHashOrCashtag = {};

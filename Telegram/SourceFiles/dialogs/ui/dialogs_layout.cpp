@@ -513,6 +513,36 @@ void PaintRow(
 				&& !item->isEmpty()));
 	}
 
+	if (context.multiSelected) {
+		const auto photoSize = context.st->photoSize;
+		const auto checkSize = photoSize / 2;
+		const auto x = context.st->padding.left()
+			+ photoSize - checkSize;
+		const auto y = context.st->padding.top()
+			+ photoSize - checkSize;
+		auto hq = PainterHighQualityEnabler(p);
+		p.setPen(Qt::NoPen);
+		p.setBrush(st::dialogsOnlineBadgeFg);
+		p.drawEllipse(x - 1, y - 1, checkSize + 2, checkSize + 2);
+		p.setBrush(st::windowBgActive);
+		p.drawEllipse(x, y, checkSize, checkSize);
+		const auto checkLine = checkSize / 5;
+		auto pen = QPen(st::windowFgActive);
+		pen.setWidthF(std::max(checkLine, 1) * 1.5);
+		pen.setCapStyle(Qt::RoundCap);
+		pen.setJoinStyle(Qt::RoundJoin);
+		p.setPen(pen);
+		const auto cx = x + checkSize / 2;
+		const auto cy = y + checkSize / 2;
+		const auto o = checkSize / 5;
+		QPointF points[3] = {
+			{ qreal(cx - o), qreal(cy) },
+			{ qreal(cx - o / 3), qreal(cy + o) },
+			{ qreal(cx + o), qreal(cy - o) },
+		};
+		p.drawPolyline(points, 3);
+	}
+
 	const auto nameleft = context.st->nameLeft;
 	if (context.topicsExpanded > 0.) {
 		PaintExpandedTopicsBar(p, context.topicsExpanded);

@@ -144,6 +144,13 @@ public:
 
 	void clearSelection();
 
+	// Multi-select mode for bulk operations.
+	void toggleMultiSelect(Key key);
+	void clearMultiSelect();
+	[[nodiscard]] bool inMultiSelectMode() const;
+	[[nodiscard]] const base::flat_set<Key> &multiSelected() const;
+	[[nodiscard]] rpl::producer<int> multiSelectCountChanges() const;
+
 	void changeOpenedFolder(Data::Folder *folder);
 	void changeOpenedForum(Data::Forum *forum);
 	void showSavedSublists();
@@ -699,6 +706,9 @@ private:
 	bool _searchWaiting = false;
 
 	base::unique_qptr<Ui::PopupMenu> _menu;
+
+	base::flat_set<Key> _multiSelected;
+	rpl::event_stream<int> _multiSelectCountChanges;
 
 };
 
