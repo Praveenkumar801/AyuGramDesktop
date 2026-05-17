@@ -805,7 +805,7 @@ void StickerSetBox::updateButtons() {
 					&st::menuIconReorder);
 			});
 		}();
-		const auto addPackIdActions = [=](const std::shared_ptr<base::unique_qptr<Ui::PopupMenu>> &menu)
+		const auto addPackIdActions = [=](base::unique_qptr<Ui::PopupMenu> *menu)
 		{
 			if (type == Data::StickersType::Stickers || type == Data::StickersType::Emoji) {
 				const auto &settings = AyuSettings::getInstance();
